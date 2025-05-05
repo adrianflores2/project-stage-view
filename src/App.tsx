@@ -9,6 +9,7 @@ import { AppSidebar } from "./components/AppSidebar";
 import Index from "./pages/Index";
 import Projects from "./pages/Projects";
 import InProgress from "./pages/InProgress";
+import Reports from "./pages/Reports";
 import DailyActivity from "./pages/DailyActivity";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
@@ -66,6 +67,13 @@ const AppRoutes = () => {
         <ProtectedRoute>
           <AppLayout>
             <InProgress />
+          </AppLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/reports" element={
+        <ProtectedRoute>
+          <AppLayout>
+            <Reports />
           </AppLayout>
         </ProtectedRoute>
       } />

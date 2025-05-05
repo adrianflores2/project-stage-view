@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileReport, User, Calendar as CalendarIcon } from 'lucide-react';
+import { FileText, User, Calendar as CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { Report } from '@/types';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +19,7 @@ const Reports = () => {
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold flex items-center mb-6">
-        <FileReport className="mr-2" /> Worker Reports
+        <FileText className="mr-2" /> Worker Reports
       </h1>
       
       {sortedReports.length > 0 ? (

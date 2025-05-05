@@ -12,7 +12,7 @@ import {
   SidebarMenuButton
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { Calendar, Calendar as CalendarIcon, Kanban, Lock, Plus, User, Users, FileReport } from 'lucide-react';
+import { Calendar, Calendar as CalendarIcon, Kanban, Lock, Plus, User, Users, FileText } from 'lucide-react';
 import UserManagement from './UserManagement';
 
 export function AppSidebar() {
@@ -77,7 +77,7 @@ export function AppSidebar() {
                   isActive={location.pathname === '/reports'}
                   tooltip="Reports"
                 >
-                  <FileReport className="h-4 w-4" />
+                  <FileText className="h-4 w-4" />
                   <span>Reports</span>
                 </SidebarMenuButton>
               </Link>

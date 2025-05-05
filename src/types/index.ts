@@ -47,3 +47,14 @@ export interface Project {
   stages: string[];
   color: string;
 }
+
+// New Report type for worker-generated reports
+export interface Report {
+  id: string;
+  userId: string;
+  userName: string;
+  date: Date;
+  message: string;
+  completedTasks: Task[];
+  completedSubtasks: SubTask[];
+}

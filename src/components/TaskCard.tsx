@@ -14,7 +14,7 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
-import { format } from 'date-fns';
+import { format, differenceInDays } from 'date-fns';
 import { Calendar, Check, Clock, List, MessageSquare, MoreVertical, User } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -51,10 +51,45 @@ const TaskCard = ({ task, projectColor, viewMode }: TaskCardProps) => {
   // Format dates
   const formattedDueDate = task.dueDate ? format(new Date(task.dueDate), 'dd MMM') : 'No due date';
   
+  // Calculate days remaining until due date for countdown
+  const getDaysRemaining = () => {
+    if (!task.dueDate) return null;
+    const today = new Date();
+    const dueDate = new Date(task.dueDate);
+    return differenceInDays(dueDate, today);
+  };
+  
+  const daysRemaining = getDaysRemaining();
+  
+  // Get color for countdown based on days remaining
+  const getCountdownColor = () => {
+    if (daysRemaining === null) return 'bg-gray-300';
+    if (daysRemaining <= 0) return 'bg-red-500';
+    if (daysRemaining <= 2) return 'bg-yellow-500';
+    return 'bg-green-500';
+  };
+  
+  // Calculate countdown progress (inverse of time remaining)
+  const getCountdownProgress = () => {
+    if (daysRemaining === null) return 0;
+    // Use 10 days as the maximum scale
+    return Math.max(0, Math.min(100, (10 - Math.min(daysRemaining, 10)) * 10));
+  };
+  
   // Permissions
   const canViewDetails = currentUser?.role === 'supervisor' || 
                           currentUser?.role === 'coordinator' || 
                           task.assignedTo === currentUser?.id;
+  
+  // Create a light background color for project tint (10% opacity)
+  const getBackgroundTint = () => {
+    // Convert hex to RGB with opacity
+    const hex = projectColor.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, 0.1)`;
+  };
   
   if (viewMode === 'list') {
     return (
@@ -62,6 +97,7 @@ const TaskCard = ({ task, projectColor, viewMode }: TaskCardProps) => {
         <div 
           className="bg-white border rounded-md p-2.5 cursor-pointer hover:bg-gray-50 transition-colors group"
           onClick={() => canViewDetails && setShowDetailDialog(true)}
+          style={{ background: getBackgroundTint() }}
         >
           <div className="flex justify-between items-start">
             <div className="flex-1">
@@ -117,12 +153,23 @@ const TaskCard = ({ task, projectColor, viewMode }: TaskCardProps) => {
             </div>
           </div>
           
-          <div className="w-full h-0.5 bg-gray-100 mt-2">
+          {/* Task completion progress */}
+          <div className="w-full h-0.5 bg-gray-100 mt-2 mb-1">
             <div 
               className={`h-full ${task.status === 'completed' ? 'bg-status-completed' : 'bg-status-inProgress'}`} 
               style={{ width: `${task.progress}%` }}
             ></div>
           </div>
+          
+          {/* Due date countdown */}
+          {task.dueDate && (
+            <div className="w-full h-0.5 bg-gray-100">
+              <div 
+                className={`h-full ${getCountdownColor()}`} 
+                style={{ width: `${getCountdownProgress()}%` }}
+              ></div>
+            </div>
+          )}
         </div>
         
         {showDetailDialog && (
@@ -142,7 +189,10 @@ const TaskCard = ({ task, projectColor, viewMode }: TaskCardProps) => {
     <>
       <Card 
         className="task-card w-full cursor-pointer group hover:shadow-md transition-shadow"
-        style={{ borderLeft: `4px solid ${projectColor}` }} 
+        style={{ 
+          borderLeft: `4px solid ${projectColor}`,
+          background: getBackgroundTint()
+        }} 
         onClick={() => canViewDetails && setShowDetailDialog(true)}
       >
         <div className="p-3 pb-1">
@@ -186,16 +236,31 @@ const TaskCard = ({ task, projectColor, viewMode }: TaskCardProps) => {
             <div className="text-xs text-gray-500 flex items-center">
               <Clock size={12} className="mr-1" />
               {formattedDueDate}
+              {daysRemaining !== null && daysRemaining <= 2 && (
+                <span className={daysRemaining <= 0 ? "text-red-500 ml-1 font-medium" : "text-yellow-600 ml-1 font-medium"}>
+                  {daysRemaining <= 0 ? "Overdue!" : `${daysRemaining}d left`}
+                </span>
+              )}
             </div>
           </div>
         </div>
         
         <div className="p-3 pt-1 pb-2">
+          {/* Task completion progress */}
           <Progress 
             value={task.progress} 
-            className="h-1 mb-2"
+            className="h-1 mb-1"
             indicatorClassName={task.status === 'completed' ? 'bg-status-completed' : 'bg-status-inProgress'}
           />
+          
+          {/* Due date countdown progress */}
+          {task.dueDate && (
+            <Progress 
+              value={getCountdownProgress()} 
+              className="h-1 mb-2"
+              indicatorClassName={getCountdownColor()}
+            />
+          )}
           
           <div className="flex justify-between items-center">
             <div className="text-xs text-gray-600 flex items-center">

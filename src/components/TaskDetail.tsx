@@ -9,7 +9,7 @@ import {
   DialogTitle 
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { format } from 'date-fns';
+import { format, differenceInDays } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -26,7 +26,8 @@ import {
   Calendar, 
   CheckSquare,
   Plus,
-  Save
+  Save,
+  FileText
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -46,19 +47,27 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
     updateTask,
     addSubtask,
     updateSubtask,
-    addNote
+    addNote,
+    generateReport
   } = useAppContext();
   
   const [newNote, setNewNote] = useState('');
   const [newSubtask, setNewSubtask] = useState('');
   const [editingTask, setEditingTask] = useState<Task>({...task});
+  const [reportMessage, setReportMessage] = useState('');
   
   const assignedUser = getUserById(task.assignedTo);
   const project = getProjectById(task.projectId);
   
+  // Worker can now update task status and add subtasks
   const canAddNote = currentUser?.role !== 'worker';
   const canAddSubtask = currentUser?.role === 'worker' || currentUser?.role === 'coordinator';
   const canEditTask = currentUser?.role === 'coordinator';
+  const canUpdateStatus = currentUser?.role === 'worker' || currentUser?.role === 'coordinator';
+  const isAssignedToCurrentUser = currentUser?.id === task.assignedTo;
+  
+  // Allow workers to generate report if they're assigned to this task
+  const canGenerateReport = currentUser?.role === 'worker' && isAssignedToCurrentUser;
   
   const handleNoteSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,6 +114,23 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
     }));
   };
 
+  const handleGenerateReport = () => {
+    if (currentUser) {
+      generateReport(task.id, reportMessage);
+      setReportMessage('');
+    }
+  };
+  
+  // Calculate days remaining until due date
+  const getDaysRemaining = () => {
+    if (!task.dueDate) return null;
+    const today = new Date();
+    const dueDate = new Date(task.dueDate);
+    return differenceInDays(dueDate, today);
+  };
+  
+  const daysRemaining = getDaysRemaining();
+  
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -123,7 +149,8 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
             <TabsTrigger value="details">Details</TabsTrigger>
             <TabsTrigger value="subtasks">Subtasks</TabsTrigger>
             <TabsTrigger value="notes">Notes</TabsTrigger>
-            {canEditTask && <TabsTrigger value="edit">Edit</TabsTrigger>}
+            {(canEditTask || canUpdateStatus) && <TabsTrigger value="edit">Edit</TabsTrigger>}
+            {canGenerateReport && <TabsTrigger value="report">Generate Report</TabsTrigger>}
           </TabsList>
           
           {/* Details Tab */}
@@ -178,6 +205,37 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
               </div>
             </div>
             
+            {task.dueDate && (
+              <div className="rounded-md border p-3">
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-sm text-gray-500 flex items-center">
+                    <Clock size={14} className="mr-1" /> Due Date: {format(new Date(task.dueDate), 'MMM d, yyyy')}
+                  </label>
+                  <div className="text-sm font-medium">
+                    {daysRemaining !== null ? (
+                      daysRemaining > 0 ? 
+                        `${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} remaining` : 
+                        daysRemaining === 0 ? 
+                          'Due today' : 
+                          `Overdue by ${Math.abs(daysRemaining)} day${Math.abs(daysRemaining) !== 1 ? 's' : ''}`
+                    ) : ''}
+                  </div>
+                </div>
+                
+                {daysRemaining !== null && (
+                  <Progress 
+                    value={Math.max(0, Math.min(100, (10 - Math.min(daysRemaining, 10)) * 10))}
+                    className="h-2"
+                    indicatorClassName={
+                      daysRemaining > 3 ? 'bg-green-500' : 
+                      daysRemaining >= 1 ? 'bg-yellow-500' : 
+                      'bg-red-500'
+                    }
+                  />
+                )}
+              </div>
+            )}
+            
             <div className="grid gap-4 md:grid-cols-3">
               <div>
                 <label className="text-sm text-gray-500 flex items-center">
@@ -187,17 +245,6 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
                   {format(new Date(task.assignedDate), 'MMM d, yyyy')}
                 </div>
               </div>
-              
-              {task.dueDate && (
-                <div>
-                  <label className="text-sm text-gray-500 flex items-center">
-                    <Clock size={14} className="mr-1" /> Due Date
-                  </label>
-                  <div className="text-sm mt-1">
-                    {format(new Date(task.dueDate), 'MMM d, yyyy')}
-                  </div>
-                </div>
-              )}
               
               {task.completedDate && (
                 <div>
@@ -307,25 +354,29 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
             )}
           </TabsContent>
           
-          {/* Edit Tab */}
-          {canEditTask && (
+          {/* Edit Tab - Now available for workers to update task status */}
+          {(canEditTask || canUpdateStatus) && (
             <TabsContent value="edit" className="space-y-4 pt-4">
               <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium">Title</label>
-                  <Input 
-                    value={editingTask.title} 
-                    onChange={(e) => setEditingTask(prev => ({ ...prev, title: e.target.value }))}
-                  />
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium">Description</label>
-                  <Textarea 
-                    value={editingTask.description} 
-                    onChange={(e) => setEditingTask(prev => ({ ...prev, description: e.target.value }))}
-                  />
-                </div>
+                {canEditTask && (
+                  <>
+                    <div>
+                      <label className="text-sm font-medium">Title</label>
+                      <Input 
+                        value={editingTask.title} 
+                        onChange={(e) => setEditingTask(prev => ({ ...prev, title: e.target.value }))}
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="text-sm font-medium">Description</label>
+                      <Textarea 
+                        value={editingTask.description} 
+                        onChange={(e) => setEditingTask(prev => ({ ...prev, description: e.target.value }))}
+                      />
+                    </div>
+                  </>
+                )}
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -346,46 +397,79 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
                     </Select>
                   </div>
                   
-                  <div>
-                    <label className="text-sm font-medium">Project Stage</label>
-                    <Select 
-                      value={editingTask.projectStage} 
-                      onValueChange={(value) => setEditingTask(prev => ({ ...prev, projectStage: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {project?.stages.map(stage => (
-                          <SelectItem key={stage} value={stage}>
-                            {stage}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium">Priority</label>
-                    <Select 
-                      value={editingTask.priority || 'Media'} 
-                      onValueChange={handlePriorityChange}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Alta">Alta</SelectItem>
-                        <SelectItem value="Media">Media</SelectItem>
-                        <SelectItem value="Baja">Baja</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {canEditTask && (
+                    <>
+                      <div>
+                        <label className="text-sm font-medium">Project Stage</label>
+                        <Select 
+                          value={editingTask.projectStage} 
+                          onValueChange={(value) => setEditingTask(prev => ({ ...prev, projectStage: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {project?.stages.map(stage => (
+                              <SelectItem key={stage} value={stage}>
+                                {stage}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div>
+                        <label className="text-sm font-medium">Priority</label>
+                        <Select 
+                          value={editingTask.priority || 'Media'} 
+                          onValueChange={handlePriorityChange}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Alta">Alta</SelectItem>
+                            <SelectItem value="Media">Media</SelectItem>
+                            <SelectItem value="Baja">Baja</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </>
+                  )}
                 </div>
                 
                 <Button onClick={handleTaskUpdate}>
                   <Save size={16} className="mr-1" /> Save Changes
                 </Button>
+              </div>
+            </TabsContent>
+          )}
+          
+          {/* Report Generation Tab for Workers */}
+          {canGenerateReport && (
+            <TabsContent value="report" className="space-y-4 pt-4">
+              <div>
+                <h3 className="text-lg font-medium mb-3">Generate Task Report</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  This will generate a report of all completed tasks and subtasks for today. You can add an optional message.
+                </p>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium">Message (Optional)</label>
+                    <Textarea
+                      placeholder="Add any additional notes or context about your work today..."
+                      value={reportMessage}
+                      onChange={(e) => setReportMessage(e.target.value)}
+                      className="min-h-[100px]"
+                    />
+                  </div>
+                  
+                  <Button onClick={handleGenerateReport} className="w-full">
+                    <FileText size={16} className="mr-1" />
+                    Generate Report
+                  </Button>
+                </div>
               </div>
             </TabsContent>
           )}

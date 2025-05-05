@@ -17,7 +17,7 @@ const ProjectBoard = () => {
   const { currentUser, projects, users, getFilteredTasks } = useAppContext();
   const [selectedUserId, setSelectedUserId] = useState<string | undefined>(undefined);
   const [showCreateTask, setShowCreateTask] = useState(false);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid'); // Changed default to 'grid'
   
   // Determine which users can be filtered based on role
   let filterableUsers = [];

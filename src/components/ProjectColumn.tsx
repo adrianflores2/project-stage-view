@@ -18,13 +18,13 @@ const ProjectColumn = ({ project, tasks, viewMode }: ProjectColumnProps) => {
     return result;
   }, {});
 
-  // Only show stages that have tasks or if user is coordinator (who can create tasks)
+  // Only show stages that have tasks (hide empty stages)
   const stagesToShow = project.stages.filter(
-    stage => tasksByStage[stage].length > 0 || currentUser?.role === 'coordinator'
+    stage => tasksByStage[stage].length > 0
   );
 
   if (stagesToShow.length === 0) {
-    return null; // No stages to show
+    return null; // No stages with tasks to show
   }
 
   return (
@@ -40,7 +40,11 @@ const ProjectColumn = ({ project, tasks, viewMode }: ProjectColumnProps) => {
       {viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {stagesToShow.map(stage => (
-            <div key={`${project.id}-${stage}`} className="bg-gray-50 p-4 rounded-lg">
+            <div 
+              key={`${project.id}-${stage}`} 
+              className="bg-gray-50 p-4 rounded-lg"
+              style={{ backgroundColor: `rgba(${project.color.replace('#', '').match(/../g)?.map(hex => parseInt(hex, 16)).join(', ')}, 0.05)` }}
+            >
               <h3 className="text-sm font-medium text-gray-500 mb-3">{stage}</h3>
               <div className="space-y-3">
                 {tasksByStage[stage].map(task => (
@@ -69,9 +73,6 @@ const ProjectColumn = ({ project, tasks, viewMode }: ProjectColumnProps) => {
                     viewMode="list" 
                   />
                 ))}
-                {tasksByStage[stage].length === 0 && (
-                  <div className="text-sm text-gray-400 p-2">No tasks in this stage</div>
-                )}
               </div>
             </div>
           ))}

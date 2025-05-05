@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { User, Task, Project, SubTask, Note } from '@/types';
+import { User, Task, Project, SubTask, Note, Report } from '@/types';
 import { users as initialUsers, tasks as initialTasks, projects as initialProjects } from '@/data/mockData';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -9,6 +9,7 @@ interface AppContextProps {
   users: User[];
   tasks: Task[];
   projects: Project[];
+  reports: Report[];
   isAuthenticated: boolean;
   login: (email: string, password: string) => boolean;
   logout: () => void;
@@ -29,6 +30,8 @@ interface AppContextProps {
   addUser: (user: Omit<User, 'id'>) => void;
   removeUser: (userId: string) => void;
   calculateTaskProgress: (task: Task) => number;
+  generateReport: (taskId: string, message: string) => void;
+  getReports: () => Report[];
 }
 
 const AppContext = createContext<AppContextProps | undefined>(undefined);
@@ -38,6 +41,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [usersList, setUsersList] = useState<User[]>(initialUsers);
   const [tasksList, setTasksList] = useState<Task[]>(initialTasks);
   const [projectsList, setProjectsList] = useState<Project[]>(initialProjects);
+  const [reportsList, setReportsList] = useState<Report[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { toast } = useToast();
   
@@ -311,6 +315,57 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       description: "User has been successfully removed."
     });
   };
+  
+  // New function for generating worker reports
+  const generateReport = (taskId: string, message: string) => {
+    if (!currentUser) return;
+    
+    const task = tasksList.find(t => t.id === taskId);
+    if (!task) return;
+    
+    // Get all completed tasks and subtasks for the current user from today
+    const today = new Date();
+    const todaysCompletedTasks = tasksList.filter(t => 
+      t.assignedTo === currentUser.id &&
+      t.status === 'completed' &&
+      t.completedDate &&
+      new Date(t.completedDate).toDateString() === today.toDateString()
+    );
+    
+    // Get all subtasks completed today
+    const completedSubtasks = tasksList
+      .filter(t => t.assignedTo === currentUser.id)
+      .flatMap(t => t.subtasks.filter(st => 
+        st.status === 'completed'
+      ));
+    
+    const newReport: Report = {
+      id: Date.now().toString(),
+      userId: currentUser.id,
+      userName: currentUser.name,
+      date: new Date(),
+      message: message,
+      completedTasks: todaysCompletedTasks,
+      completedSubtasks: completedSubtasks
+    };
+    
+    setReportsList(prev => [...prev, newReport]);
+    
+    toast({
+      title: "Report generated",
+      description: "Your daily report has been submitted successfully."
+    });
+  };
+  
+  // Get all reports (for coordinators and supervisors)
+  const getReports = () => {
+    if (currentUser?.role === 'worker') {
+      // Workers can only see their own reports
+      return reportsList.filter(report => report.userId === currentUser.id);
+    }
+    // Coordinators and Supervisors can see all reports
+    return reportsList;
+  };
 
   return (
     <AppContext.Provider value={{
@@ -318,6 +373,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       users: usersList,
       tasks: tasksList,
       projects: projectsList,
+      reports: reportsList,
       isAuthenticated,
       login,
       logout,
@@ -337,7 +393,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       updateProject,
       addUser,
       removeUser,
-      calculateTaskProgress
+      calculateTaskProgress,
+      generateReport,
+      getReports
     }}>
       {children}
     </AppContext.Provider>

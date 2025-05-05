@@ -36,51 +36,51 @@ export function AppSidebar() {
         <SidebarContent>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton
-                as={Link}
-                to="/"
-                active={location.pathname === '/'}
-                tooltip="Task Board"
-              >
-                <Kanban className="h-4 w-4" />
-                <span>Task Board</span>
-              </SidebarMenuButton>
+              <Link to="/" className="w-full">
+                <SidebarMenuButton
+                  active={location.pathname === '/'}
+                  tooltip="Task Board"
+                >
+                  <Kanban className="h-4 w-4" />
+                  <span>Task Board</span>
+                </SidebarMenuButton>
+              </Link>
             </SidebarMenuItem>
 
             <SidebarMenuItem>
-              <SidebarMenuButton
-                as={Link}
-                to="/projects"
-                active={location.pathname === '/projects'}
-                tooltip="Projects"
-              >
-                <Plus className="h-4 w-4" />
-                <span>Projects</span>
-              </SidebarMenuButton>
+              <Link to="/projects" className="w-full">
+                <SidebarMenuButton
+                  active={location.pathname === '/projects'}
+                  tooltip="Projects"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Projects</span>
+                </SidebarMenuButton>
+              </Link>
             </SidebarMenuItem>
 
             <SidebarMenuItem>
-              <SidebarMenuButton
-                as={Link}
-                to="/in-progress"
-                active={location.pathname === '/in-progress'}
-                tooltip="In Progress"
-              >
-                <CalendarIcon className="h-4 w-4" />
-                <span>In Progress</span>
-              </SidebarMenuButton>
+              <Link to="/in-progress" className="w-full">
+                <SidebarMenuButton
+                  active={location.pathname === '/in-progress'}
+                  tooltip="In Progress"
+                >
+                  <CalendarIcon className="h-4 w-4" />
+                  <span>In Progress</span>
+                </SidebarMenuButton>
+              </Link>
             </SidebarMenuItem>
 
             <SidebarMenuItem>
-              <SidebarMenuButton
-                as={Link}
-                to="/daily-activity"
-                active={location.pathname === '/daily-activity'}
-                tooltip="Daily Activity"
-              >
-                <Calendar className="h-4 w-4" />
-                <span>Daily Activity</span>
-              </SidebarMenuButton>
+              <Link to="/daily-activity" className="w-full">
+                <SidebarMenuButton
+                  active={location.pathname === '/daily-activity'}
+                  tooltip="Daily Activity"
+                >
+                  <Calendar className="h-4 w-4" />
+                  <span>Daily Activity</span>
+                </SidebarMenuButton>
+              </Link>
             </SidebarMenuItem>
 
             {canManageUsers && (

@@ -1,12 +1,12 @@
 
-import { User, Task, Project, UserRole } from '@/types';
+import { User, Task, Project } from '@/types';
 
-// Mock Users
+// Mock Users with passwords
 export const users: User[] = [
-  { id: '1', name: 'John Worker', role: 'worker', email: 'john@example.com' },
-  { id: '2', name: 'Jane Coordinator', role: 'coordinator', email: 'jane@example.com' },
-  { id: '3', name: 'Mike Supervisor', role: 'supervisor', email: 'mike@example.com' },
-  { id: '4', name: 'Sarah Worker', role: 'worker', email: 'sarah@example.com' },
+  { id: '1', name: 'John Worker', role: 'worker', email: 'john@example.com', password: 'password123' },
+  { id: '2', name: 'Jane Coordinator', role: 'coordinator', email: 'jane@example.com', password: 'password123' },
+  { id: '3', name: 'Mike Supervisor', role: 'supervisor', email: 'mike@example.com', password: 'password123' },
+  { id: '4', name: 'Sarah Worker', role: 'worker', email: 'sarah@example.com', password: 'password123' },
 ];
 
 // Mock Projects
@@ -31,7 +31,7 @@ export const projects: Project[] = [
   },
 ];
 
-// Mock Tasks
+// Mock Tasks - now with priority field
 export const tasks: Task[] = [
   {
     id: '1',
@@ -57,6 +57,7 @@ export const tasks: Task[] = [
     assignedDate: new Date('2025-04-25'),
     dueDate: new Date('2025-05-10'),
     progress: 33, // 1 out of 3 subtasks completed
+    priority: 'Alta'
   },
   {
     id: '2',
@@ -71,6 +72,7 @@ export const tasks: Task[] = [
     assignedDate: new Date('2025-04-30'),
     dueDate: new Date('2025-05-15'),
     progress: 0,
+    priority: 'Media'
   },
   {
     id: '3',
@@ -104,6 +106,7 @@ export const tasks: Task[] = [
     dueDate: new Date('2025-04-25'),
     completedDate: new Date('2025-04-24'),
     progress: 100, // All subtasks completed
+    priority: 'Baja'
   },
   {
     id: '4',
@@ -129,13 +132,9 @@ export const tasks: Task[] = [
     assignedDate: new Date('2025-04-28'),
     dueDate: new Date('2025-05-12'),
     progress: 33, // 1 out of 3 subtasks completed
+    priority: 'Media'
   },
 ];
 
-// Current logged-in user (for development purposes)
-export const currentUser: User = {
-  id: '2',
-  name: 'Jane Coordinator',
-  role: 'coordinator',
-  email: 'jane@example.com',
-};
+// Initialize without a current user - now we'll use the login system
+export const currentUser = null;

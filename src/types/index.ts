@@ -6,6 +6,7 @@ export interface User {
   name: string;
   role: UserRole;
   email: string;
+  password?: string; // Added for authentication
 }
 
 export type TaskStatus = 'not-started' | 'in-progress' | 'paused' | 'completed';
@@ -37,6 +38,7 @@ export interface Task {
   dueDate?: Date;
   completedDate?: Date;
   progress: number; // 0-100
+  priority?: 'Alta' | 'Media' | 'Baja'; // Added priority field
 }
 
 export interface Project {

@@ -29,6 +29,7 @@ import {
   Save
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 
 interface TaskDetailProps {
   task: Task;
@@ -96,6 +97,13 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
       completedDate: status === 'completed' ? new Date() : undefined
     }));
   };
+  
+  const handlePriorityChange = (priority: string) => {
+    setEditingTask(prev => ({
+      ...prev,
+      priority: priority as 'Alta' | 'Media' | 'Baja'
+    }));
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -148,17 +156,23 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
                 </div>
               </div>
               
+              {task.priority && (
+                <div className="min-w-[180px]">
+                  <label className="text-sm text-gray-500">Priority</label>
+                  <div className="mt-1 font-medium">
+                    {task.priority}
+                  </div>
+                </div>
+              )}
+              
               <div className="min-w-[180px]">
                 <label className="text-sm text-gray-500">Progress</label>
                 <div className="w-full mt-1">
-                  <div className="w-full h-2 bg-gray-100 rounded-full">
-                    <div 
-                      className={`h-full rounded-full ${
-                        task.status === 'completed' ? 'bg-status-completed' : 'bg-status-inProgress'
-                      }`} 
-                      style={{ width: `${task.progress}%` }}
-                    ></div>
-                  </div>
+                  <Progress
+                    value={task.progress}
+                    className="h-2"
+                    indicatorClassName={task.status === 'completed' ? 'bg-status-completed' : 'bg-status-inProgress'}
+                  />
                   <div className="text-sm mt-1">{task.progress}% complete</div>
                 </div>
               </div>
@@ -313,41 +327,60 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
                   />
                 </div>
                 
-                <div>
-                  <label className="text-sm font-medium">Status</label>
-                  <Select 
-                    value={editingTask.status} 
-                    onValueChange={handleTaskStatusChange}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="not-started">Not Started</SelectItem>
-                      <SelectItem value="in-progress">In Progress</SelectItem>
-                      <SelectItem value="paused">Paused</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium">Project Stage</label>
-                  <Select 
-                    value={editingTask.projectStage} 
-                    onValueChange={(value) => setEditingTask(prev => ({ ...prev, projectStage: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {project?.stages.map(stage => (
-                        <SelectItem key={stage} value={stage}>
-                          {stage}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Status</label>
+                    <Select 
+                      value={editingTask.status} 
+                      onValueChange={handleTaskStatusChange}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="not-started">Not Started</SelectItem>
+                        <SelectItem value="in-progress">In Progress</SelectItem>
+                        <SelectItem value="paused">Paused</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium">Project Stage</label>
+                    <Select 
+                      value={editingTask.projectStage} 
+                      onValueChange={(value) => setEditingTask(prev => ({ ...prev, projectStage: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {project?.stages.map(stage => (
+                          <SelectItem key={stage} value={stage}>
+                            {stage}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium">Priority</label>
+                    <Select 
+                      value={editingTask.priority || 'Media'} 
+                      onValueChange={handlePriorityChange}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Alta">Alta</SelectItem>
+                        <SelectItem value="Media">Media</SelectItem>
+                        <SelectItem value="Baja">Baja</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 
                 <Button onClick={handleTaskUpdate}>

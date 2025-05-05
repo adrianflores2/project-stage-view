@@ -1,7 +1,7 @@
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { User, Task, Project, SubTask, Note } from '@/types';
-import { users, tasks as initialTasks, projects as initialProjects, currentUser as initialCurrentUser } from '@/data/mockData';
+import { users as initialUsers, tasks as initialTasks, projects as initialProjects } from '@/data/mockData';
 import { useToast } from '@/components/ui/use-toast';
 
 interface AppContextProps {
@@ -9,12 +9,16 @@ interface AppContextProps {
   users: User[];
   tasks: Task[];
   projects: Project[];
+  isAuthenticated: boolean;
+  login: (email: string, password: string) => boolean;
+  logout: () => void;
   setCurrentUser: (user: User) => void;
   getUserByName: (name: string) => User | undefined;
   getUserById: (id: string) => User | undefined;
   getProjectById: (id: string) => Project | undefined;
   getFilteredTasks: (projectId?: string, assignedTo?: string) => Task[];
   getTasksInProgress: () => Task[];
+  getCompletedTasksByDate: (date: Date) => Task[];
   addTask: (task: Omit<Task, 'id' | 'assignedDate' | 'progress'>) => void;
   updateTask: (task: Task) => void;
   addSubtask: (taskId: string, subtask: Omit<SubTask, 'id'>) => void;
@@ -22,23 +26,67 @@ interface AppContextProps {
   addNote: (taskId: string, content: string) => void;
   addProject: (project: Omit<Project, 'id'>) => void;
   updateProject: (project: Project) => void;
+  addUser: (user: Omit<User, 'id'>) => void;
+  removeUser: (userId: string) => void;
   calculateTaskProgress: (task: Task) => number;
 }
 
 const AppContext = createContext<AppContextProps | undefined>(undefined);
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-  const [currentUser, setCurrentUser] = useState<User | null>(initialCurrentUser);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [usersList, setUsersList] = useState<User[]>(initialUsers);
   const [tasksList, setTasksList] = useState<Task[]>(initialTasks);
   const [projectsList, setProjectsList] = useState<Project[]>(initialProjects);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { toast } = useToast();
+  
+  // Check for saved authentication on component mount
+  useEffect(() => {
+    const savedUser = localStorage.getItem('currentUser');
+    if (savedUser) {
+      try {
+        const parsedUser = JSON.parse(savedUser);
+        setCurrentUser(parsedUser);
+        setIsAuthenticated(true);
+      } catch (error) {
+        console.error("Failed to parse saved user:", error);
+      }
+    }
+  }, []);
+
+  const login = (email: string, password: string) => {
+    const user = usersList.find(u => 
+      u.email.toLowerCase() === email.toLowerCase() && 
+      u.password === password
+    );
+    
+    if (user) {
+      setCurrentUser(user);
+      setIsAuthenticated(true);
+      localStorage.setItem('currentUser', JSON.stringify(user));
+      return true;
+    }
+    
+    return false;
+  };
+  
+  const logout = () => {
+    setCurrentUser(null);
+    setIsAuthenticated(false);
+    localStorage.removeItem('currentUser');
+    toast({
+      title: "Logged out",
+      description: "You have been successfully logged out."
+    });
+  };
 
   const getUserByName = (name: string) => {
-    return users.find(user => user.name === name);
+    return usersList.find(user => user.name === name);
   };
 
   const getUserById = (id: string) => {
-    return users.find(user => user.id === id);
+    return usersList.find(user => user.id === id);
   };
 
   const getProjectById = (id: string) => {
@@ -63,6 +111,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return tasksList.filter(task => task.status === 'in-progress' || 
       task.subtasks.some(subtask => subtask.status === 'in-progress'));
   };
+  
+  const getCompletedTasksByDate = (date: Date) => {
+    return tasksList.filter(task => 
+      task.status === 'completed' && 
+      task.completedDate && 
+      new Date(task.completedDate).toDateString() === date.toDateString()
+    );
+  };
 
   const calculateTaskProgress = (task: Task) => {
     if (task.subtasks.length === 0) {
@@ -79,6 +135,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       id: Date.now().toString(),
       assignedDate: new Date(),
       progress: 0,
+      notes: [],
+      subtasks: []
     };
     
     setTasksList(prev => [...prev, newTask]);
@@ -218,19 +276,58 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       description: `Project "${updatedProject.name}" has been updated.`
     });
   };
+  
+  const addUser = (user: Omit<User, 'id'>) => {
+    const newUser = {
+      ...user,
+      id: Date.now().toString()
+    };
+    
+    setUsersList(prev => [...prev, newUser]);
+    
+    toast({
+      title: "User added",
+      description: `User "${newUser.name}" has been successfully added.`
+    });
+  };
+  
+  const removeUser = (userId: string) => {
+    // Check if user has assigned tasks
+    const hasAssignedTasks = tasksList.some(task => task.assignedTo === userId);
+    
+    if (hasAssignedTasks) {
+      toast({
+        title: "Cannot remove user",
+        description: "This user has assigned tasks. Please reassign them first.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setUsersList(prev => prev.filter(user => user.id !== userId));
+    
+    toast({
+      title: "User removed",
+      description: "User has been successfully removed."
+    });
+  };
 
   return (
     <AppContext.Provider value={{
       currentUser,
-      users,
+      users: usersList,
       tasks: tasksList,
       projects: projectsList,
+      isAuthenticated,
+      login,
+      logout,
       setCurrentUser,
       getUserByName,
       getUserById,
       getProjectById,
       getFilteredTasks,
       getTasksInProgress,
+      getCompletedTasksByDate,
       addTask,
       updateTask,
       addSubtask,
@@ -238,6 +335,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       addNote,
       addProject,
       updateProject,
+      addUser,
+      removeUser,
       calculateTaskProgress
     }}>
       {children}

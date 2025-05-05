@@ -1,107 +1,104 @@
 
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarTrigger,
-} from '@/components/ui/sidebar';
+import { useState } from 'react';
+import { useLocation, Link } from 'react-router-dom';
 import { useAppContext } from '@/context/AppContext';
-import { User, UserRole } from '@/types';
-import { 
-  Kanban, 
-  Tag, 
-  Clock, 
-  Settings, 
-  LogOut, 
-  UserCircle2 
-} from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { Sidebar } from '@/components/ui/sidebar';
+import { Button } from '@/components/ui/button';
+import { Calendar, Calendar as CalendarIcon, Kanban, Lock, Plus, User, Users } from 'lucide-react';
+import UserManagement from './UserManagement';
 
-export const AppSidebar = () => {
-  const { currentUser } = useAppContext();
-  const navigate = useNavigate();
+export function AppSidebar() {
   const location = useLocation();
-  
-  // Navigation based on user role
-  const getNavigationItems = (role: UserRole) => {
-    const baseItems = [
-      {
-        title: "Tasks",
-        url: "/",
-        icon: Kanban,
-      },
-    ];
-    
-    // Add role-specific items
-    if (role === 'supervisor' || role === 'coordinator') {
-      baseItems.push({
-        title: "In Progress",
-        url: "/in-progress",
-        icon: Clock,
-      });
-    }
-    
-    if (role === 'coordinator') {
-      baseItems.push({
-        title: "Projects",
-        url: "/projects",
-        icon: Tag,
-      });
-    }
-    
-    return baseItems;
-  };
-  
-  const navItems = currentUser ? getNavigationItems(currentUser.role) : [];
+  const { currentUser, logout } = useAppContext();
+  const [showUserManagement, setShowUserManagement] = useState(false);
+
+  // Only coordinators can manage users
+  const canManageUsers = currentUser?.role === 'coordinator';
 
   return (
-    <Sidebar>
-      <SidebarHeader className="p-4">
-        <div className="flex items-center">
-          <h1 className="font-bold text-lg">Task Manager</h1>
-          <SidebarTrigger className="ml-auto" />
-        </div>
-      </SidebarHeader>
-      
-      <SidebarContent className="p-2">
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {navItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton 
-                    className={location.pathname === item.url ? 'bg-accent' : ''}
-                    onClick={() => navigate(item.url)}
-                  >
-                    <item.icon size={18} />
-                    <span>{item.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-      
-      <SidebarFooter className="p-4">
-        {currentUser && (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <UserCircle2 className="h-8 w-8" />
-              <div>
-                <p className="text-sm font-medium">{currentUser.name}</p>
-                <p className="text-xs text-muted-foreground capitalize">{currentUser.role}</p>
-              </div>
-            </div>
+    <>
+      <Sidebar defaultExpanded={true}>
+        <Sidebar.Header>
+          <div className="flex items-center space-x-2 px-2">
+            <Kanban className="h-6 w-6" />
+            <span className="text-lg font-semibold">Task Manager</span>
           </div>
-        )}
-      </SidebarFooter>
-    </Sidebar>
+        </Sidebar.Header>
+
+        <Sidebar.Nav>
+          <Sidebar.NavItem
+            icon={<Kanban className="h-4 w-4" />}
+            as={Link}
+            to="/"
+            active={location.pathname === '/'}
+          >
+            Task Board
+          </Sidebar.NavItem>
+          <Sidebar.NavItem
+            icon={<Plus className="h-4 w-4" />}
+            as={Link}
+            to="/projects"
+            active={location.pathname === '/projects'}
+          >
+            Projects
+          </Sidebar.NavItem>
+          <Sidebar.NavItem
+            icon={<CalendarIcon className="h-4 w-4" />}
+            as={Link}
+            to="/in-progress"
+            active={location.pathname === '/in-progress'}
+          >
+            In Progress
+          </Sidebar.NavItem>
+          <Sidebar.NavItem
+            icon={<Calendar className="h-4 w-4" />}
+            as={Link}
+            to="/daily-activity"
+            active={location.pathname === '/daily-activity'}
+          >
+            Daily Activity
+          </Sidebar.NavItem>
+          {canManageUsers && (
+            <Sidebar.NavItem
+              icon={<Users className="h-4 w-4" />}
+              onClick={() => setShowUserManagement(true)}
+              className="cursor-pointer"
+            >
+              User Management
+            </Sidebar.NavItem>
+          )}
+        </Sidebar.Nav>
+
+        <Sidebar.Footer>
+          <div className="flex flex-col gap-y-2 px-2">
+            {currentUser && (
+              <div className="flex items-center justify-between gap-2 rounded-lg bg-muted p-2">
+                <div className="flex items-center gap-2">
+                  <User className="h-6 w-6" />
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-medium">{currentUser.name}</p>
+                    <p className="text-xs text-muted-foreground capitalize">{currentUser.role}</p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={logout}
+                  title="Logout"
+                >
+                  <Lock className="h-5 w-5 text-muted-foreground" />
+                </Button>
+              </div>
+            )}
+          </div>
+        </Sidebar.Footer>
+      </Sidebar>
+
+      {/* User Management Dialog */}
+      <UserManagement 
+        open={showUserManagement} 
+        onOpenChange={setShowUserManagement} 
+      />
+    </>
   );
-};
+}

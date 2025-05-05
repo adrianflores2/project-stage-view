@@ -44,6 +44,7 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
   const [projectStage, setProjectStage] = useState('');
   const [assignedTo, setAssignedTo] = useState('');
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
+  const [priority, setPriority] = useState<'Alta' | 'Media' | 'Baja'>('Media');
   
   const selectedProject = projects.find(p => p.id === projectId);
   const workerUsers = users.filter(u => u.role === 'worker');
@@ -60,7 +61,8 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
       status: 'not-started',
       subtasks: [],
       notes: [],
-      dueDate
+      dueDate,
+      priority
     });
     
     // Reset form and close dialog
@@ -70,6 +72,7 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
     setProjectStage('');
     setAssignedTo('');
     setDueDate(undefined);
+    setPriority('Media');
     onOpenChange(false);
   };
   
@@ -104,65 +107,83 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
             />
           </div>
           
-          <div>
-            <label htmlFor="project" className="text-sm font-medium">Project</label>
-            <Select value={projectId} onValueChange={setProjectId} required>
-              <SelectTrigger id="project">
-                <SelectValue placeholder="Select a project" />
-              </SelectTrigger>
-              <SelectContent>
-                {projects.map(project => (
-                  <SelectItem key={project.id} value={project.id}>
-                    {project.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="project" className="text-sm font-medium">Project</label>
+              <Select value={projectId} onValueChange={setProjectId} required>
+                <SelectTrigger id="project">
+                  <SelectValue placeholder="Select a project" />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects.map(project => (
+                    <SelectItem key={project.id} value={project.id}>
+                      {project.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <label htmlFor="stage" className="text-sm font-medium">Project Stage</label>
+              <Select 
+                value={projectStage} 
+                onValueChange={setProjectStage}
+                disabled={!projectId} 
+                required
+              >
+                <SelectTrigger id="stage">
+                  <SelectValue placeholder="Select a stage" />
+                </SelectTrigger>
+                <SelectContent>
+                  {selectedProject?.stages.map(stage => (
+                    <SelectItem key={stage} value={stage}>
+                      {stage}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           
-          <div>
-            <label htmlFor="stage" className="text-sm font-medium">Project Stage</label>
-            <Select 
-              value={projectStage} 
-              onValueChange={setProjectStage}
-              disabled={!projectId} 
-              required
-            >
-              <SelectTrigger id="stage">
-                <SelectValue placeholder="Select a stage" />
-              </SelectTrigger>
-              <SelectContent>
-                {selectedProject?.stages.map(stage => (
-                  <SelectItem key={stage} value={stage}>
-                    {stage}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div>
-            <label htmlFor="assignedTo" className="text-sm font-medium">Assign To</label>
-            <Select value={assignedTo} onValueChange={setAssignedTo} required>
-              <SelectTrigger id="assignedTo">
-                <SelectValue placeholder="Select a user" />
-              </SelectTrigger>
-              <SelectContent>
-                {/* Coordinator can assign to self */}
-                {currentUser && currentUser.role === 'coordinator' && (
-                  <SelectItem value={currentUser.id}>
-                    {currentUser.name} (me)
-                  </SelectItem>
-                )}
-                
-                {/* Or to any worker */}
-                {workerUsers.map(user => (
-                  <SelectItem key={user.id} value={user.id}>
-                    {user.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="assignedTo" className="text-sm font-medium">Assign To</label>
+              <Select value={assignedTo} onValueChange={setAssignedTo} required>
+                <SelectTrigger id="assignedTo">
+                  <SelectValue placeholder="Select a user" />
+                </SelectTrigger>
+                <SelectContent>
+                  {/* Coordinator can assign to self */}
+                  {currentUser && currentUser.role === 'coordinator' && (
+                    <SelectItem value={currentUser.id}>
+                      {currentUser.name} (me)
+                    </SelectItem>
+                  )}
+                  
+                  {/* Or to any worker */}
+                  {workerUsers.map(user => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <label htmlFor="priority" className="text-sm font-medium">Priority</label>
+              <Select value={priority} onValueChange={(value: any) => setPriority(value)}>
+                <SelectTrigger id="priority">
+                  <SelectValue placeholder="Select priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Alta">Alta</SelectItem>
+                  <SelectItem value="Media">Media</SelectItem>
+                  <SelectItem value="Baja">Baja</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           
           <div>
@@ -184,6 +205,7 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
                   selected={dueDate}
                   onSelect={setDueDate}
                   initialFocus
+                  className="p-3 pointer-events-auto"
                 />
               </PopoverContent>
             </Popover>

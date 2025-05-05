@@ -49,14 +49,14 @@ const ProjectBoard = () => {
             <div className="flex items-center bg-white rounded-lg px-3 py-1 shadow">
               <Filter size={16} className="text-gray-500 mr-2" />
               <Select
-                value={selectedUserId || ''}
-                onValueChange={(value) => setSelectedUserId(value || undefined)}
+                value={selectedUserId || 'all'}
+                onValueChange={(value) => setSelectedUserId(value === 'all' ? undefined : value)}
               >
                 <SelectTrigger className="border-0 h-8 p-0">
                   <SelectValue placeholder="All Workers" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Workers</SelectItem>
+                  <SelectItem value="all">All Workers</SelectItem>
                   {filterableUsers.map(user => (
                     <SelectItem key={user.id} value={user.id}>
                       {user.name}

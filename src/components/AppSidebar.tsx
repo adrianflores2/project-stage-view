@@ -2,7 +2,15 @@
 import { useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { useAppContext } from '@/context/AppContext';
-import { Sidebar } from '@/components/ui/sidebar';
+import { 
+  Sidebar, 
+  SidebarContent, 
+  SidebarFooter, 
+  SidebarHeader, 
+  SidebarMenu, 
+  SidebarMenuItem, 
+  SidebarMenuButton
+} from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Calendar, Calendar as CalendarIcon, Kanban, Lock, Plus, User, Users } from 'lucide-react';
 import UserManagement from './UserManagement';
@@ -17,59 +25,79 @@ export function AppSidebar() {
 
   return (
     <>
-      <Sidebar defaultExpanded={true}>
-        <Sidebar.Header>
+      <Sidebar>
+        <SidebarHeader>
           <div className="flex items-center space-x-2 px-2">
             <Kanban className="h-6 w-6" />
             <span className="text-lg font-semibold">Task Manager</span>
           </div>
-        </Sidebar.Header>
+        </SidebarHeader>
 
-        <Sidebar.Nav>
-          <Sidebar.NavItem
-            icon={<Kanban className="h-4 w-4" />}
-            as={Link}
-            to="/"
-            active={location.pathname === '/'}
-          >
-            Task Board
-          </Sidebar.NavItem>
-          <Sidebar.NavItem
-            icon={<Plus className="h-4 w-4" />}
-            as={Link}
-            to="/projects"
-            active={location.pathname === '/projects'}
-          >
-            Projects
-          </Sidebar.NavItem>
-          <Sidebar.NavItem
-            icon={<CalendarIcon className="h-4 w-4" />}
-            as={Link}
-            to="/in-progress"
-            active={location.pathname === '/in-progress'}
-          >
-            In Progress
-          </Sidebar.NavItem>
-          <Sidebar.NavItem
-            icon={<Calendar className="h-4 w-4" />}
-            as={Link}
-            to="/daily-activity"
-            active={location.pathname === '/daily-activity'}
-          >
-            Daily Activity
-          </Sidebar.NavItem>
-          {canManageUsers && (
-            <Sidebar.NavItem
-              icon={<Users className="h-4 w-4" />}
-              onClick={() => setShowUserManagement(true)}
-              className="cursor-pointer"
-            >
-              User Management
-            </Sidebar.NavItem>
-          )}
-        </Sidebar.Nav>
+        <SidebarContent>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                as={Link}
+                to="/"
+                active={location.pathname === '/'}
+                tooltip="Task Board"
+              >
+                <Kanban className="h-4 w-4" />
+                <span>Task Board</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
 
-        <Sidebar.Footer>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                as={Link}
+                to="/projects"
+                active={location.pathname === '/projects'}
+                tooltip="Projects"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Projects</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                as={Link}
+                to="/in-progress"
+                active={location.pathname === '/in-progress'}
+                tooltip="In Progress"
+              >
+                <CalendarIcon className="h-4 w-4" />
+                <span>In Progress</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                as={Link}
+                to="/daily-activity"
+                active={location.pathname === '/daily-activity'}
+                tooltip="Daily Activity"
+              >
+                <Calendar className="h-4 w-4" />
+                <span>Daily Activity</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+
+            {canManageUsers && (
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => setShowUserManagement(true)}
+                  tooltip="User Management"
+                >
+                  <Users className="h-4 w-4" />
+                  <span>User Management</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
+          </SidebarMenu>
+        </SidebarContent>
+
+        <SidebarFooter>
           <div className="flex flex-col gap-y-2 px-2">
             {currentUser && (
               <div className="flex items-center justify-between gap-2 rounded-lg bg-muted p-2">
@@ -91,7 +119,7 @@ export function AppSidebar() {
               </div>
             )}
           </div>
-        </Sidebar.Footer>
+        </SidebarFooter>
       </Sidebar>
 
       {/* User Management Dialog */}

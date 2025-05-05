@@ -6,7 +6,6 @@ import { Card } from '@/components/ui/card';
 import { 
   Tooltip, 
   TooltipContent, 
-  TooltipProvider, 
   TooltipTrigger 
 } from '@/components/ui/tooltip';
 import { 
@@ -99,19 +98,17 @@ const TaskCard = ({ task, projectColor, viewMode }: TaskCardProps) => {
             
             <div className="flex items-center ml-2">
               {task.notes.length > 0 && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <div className="flex items-center text-xs text-gray-500 mr-2">
-                        <MessageSquare size={14} />
-                        <span className="ml-0.5">{task.notes.length}</span>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{task.notes.length} note{task.notes.length !== 1 ? 's' : ''}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center text-xs text-gray-500 mr-2">
+                      <MessageSquare size={14} />
+                      <span className="ml-0.5">{task.notes.length}</span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{task.notes.length} note{task.notes.length !== 1 ? 's' : ''}</p>
+                  </TooltipContent>
+                </Tooltip>
               )}
               
               <div className="text-xs font-medium bg-gray-100 px-1.5 py-0.5 rounded">
@@ -153,35 +150,31 @@ const TaskCard = ({ task, projectColor, viewMode }: TaskCardProps) => {
             <h3 className="text-sm font-medium line-clamp-2">{task.title}</h3>
             <div className="flex items-center space-x-1">
               {task.subtasks.length > 0 && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <div className="flex items-center text-xs text-gray-500">
-                        <List size={14} className="mr-1" />
-                        <span>{task.subtasks.filter(st => st.status === 'completed').length}/{task.subtasks.length}</span>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Subtasks completed</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center text-xs text-gray-500">
+                      <List size={14} className="mr-1" />
+                      <span>{task.subtasks.filter(st => st.status === 'completed').length}/{task.subtasks.length}</span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Subtasks completed</p>
+                  </TooltipContent>
+                </Tooltip>
               )}
               
               {task.notes.length > 0 && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <div className="flex items-center text-xs text-gray-500">
-                        <MessageSquare size={14} />
-                        <span className="ml-1">{task.notes.length}</span>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{task.notes.length} note{task.notes.length !== 1 ? 's' : ''}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center text-xs text-gray-500">
+                      <MessageSquare size={14} />
+                      <span className="ml-1">{task.notes.length}</span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{task.notes.length} note{task.notes.length !== 1 ? 's' : ''}</p>
+                  </TooltipContent>
+                </Tooltip>
               )}
             </div>
           </div>

@@ -38,7 +38,7 @@ export function AppSidebar() {
             <SidebarMenuItem>
               <Link to="/" className="w-full">
                 <SidebarMenuButton
-                  active={location.pathname === '/'}
+                  isActive={location.pathname === '/'}
                   tooltip="Task Board"
                 >
                   <Kanban className="h-4 w-4" />
@@ -50,7 +50,7 @@ export function AppSidebar() {
             <SidebarMenuItem>
               <Link to="/projects" className="w-full">
                 <SidebarMenuButton
-                  active={location.pathname === '/projects'}
+                  isActive={location.pathname === '/projects'}
                   tooltip="Projects"
                 >
                   <Plus className="h-4 w-4" />
@@ -62,7 +62,7 @@ export function AppSidebar() {
             <SidebarMenuItem>
               <Link to="/in-progress" className="w-full">
                 <SidebarMenuButton
-                  active={location.pathname === '/in-progress'}
+                  isActive={location.pathname === '/in-progress'}
                   tooltip="In Progress"
                 >
                   <CalendarIcon className="h-4 w-4" />
@@ -74,7 +74,7 @@ export function AppSidebar() {
             <SidebarMenuItem>
               <Link to="/daily-activity" className="w-full">
                 <SidebarMenuButton
-                  active={location.pathname === '/daily-activity'}
+                  isActive={location.pathname === '/daily-activity'}
                   tooltip="Daily Activity"
                 >
                   <Calendar className="h-4 w-4" />

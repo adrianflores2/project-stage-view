@@ -29,8 +29,19 @@ const InProgressTracker = () => {
         Object.entries(tasksByProject).map(([projectId, tasks]) => {
           const project = getProjectById(projectId);
           
+          // Create project background tint
+          const getBackgroundTint = () => {
+            if (!project?.color) return 'rgba(203, 213, 225, 0.05)';
+            // Convert hex to RGB with opacity
+            const hex = project.color.replace('#', '');
+            const r = parseInt(hex.substring(0, 2), 16);
+            const g = parseInt(hex.substring(2, 4), 16);
+            const b = parseInt(hex.substring(4, 6), 16);
+            return `rgba(${r}, ${g}, ${b}, 0.05)`;
+          };
+          
           return (
-            <Card key={projectId} className="mb-6">
+            <Card key={projectId} className="mb-6" style={{ background: getBackgroundTint() }}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg font-semibold flex items-center">
                   <span 
@@ -47,7 +58,7 @@ const InProgressTracker = () => {
                     const inProgressSubtasks = task.subtasks.filter(st => st.status === 'in-progress');
                     
                     return (
-                      <div key={task.id} className="bg-gray-50 p-3 rounded-md">
+                      <div key={task.id} className="bg-white p-3 rounded-md shadow-sm">
                         <div className="flex items-start justify-between mb-2">
                           <h3 className="font-medium">{task.title}</h3>
                           <Badge variant="outline" className="bg-status-inProgress">
@@ -60,8 +71,13 @@ const InProgressTracker = () => {
                           {assignedUser?.name}
                           
                           {task.dueDate && (
-                            <span className="ml-4">
+                            <span className="ml-4 flex items-center">
                               Due: {format(new Date(task.dueDate), 'MMM d')}
+                              {getDaysRemaining(task.dueDate) !== null && (
+                                <span className={getDueStyle(getDaysRemaining(task.dueDate))}>
+                                  ({getDaysRemaining(task.dueDate)} days left)
+                                </span>
+                              )}
                             </span>
                           )}
                         </div>
@@ -76,21 +92,33 @@ const InProgressTracker = () => {
                           </div>
                         </div>
                         
-                        {inProgressSubtasks.length > 0 && (
+                        {/* Show all subtasks */}
+                        {task.subtasks.length > 0 && (
                           <div className="mt-3">
-                            <div className="text-sm font-medium mb-1">
-                              In-Progress Subtasks:
+                            <div className="text-sm font-medium mb-2">
+                              Subtasks:
                             </div>
-                            <ul className="space-y-1">
-                              {inProgressSubtasks.map(subtask => (
-                                <li 
-                                  key={subtask.id} 
-                                  className="text-sm flex items-center py-1 px-2 bg-white rounded border border-gray-200"
-                                >
-                                  <Check size={14} className="mr-2 text-status-inProgress" />
-                                  {subtask.title}
-                                </li>
-                              ))}
+                            <ul className="grid grid-cols-1 md:grid-cols-2 gap-1">
+                              {task.subtasks.map(subtask => {
+                                const statusColors = {
+                                  'not-started': 'bg-gray-200',
+                                  'in-progress': 'bg-status-inProgress',
+                                  'completed': 'bg-status-completed',
+                                };
+                                
+                                return (
+                                  <li 
+                                    key={subtask.id} 
+                                    className="text-xs flex items-center py-1 px-2 bg-gray-50 rounded border border-gray-200"
+                                  >
+                                    <Check size={12} className={`mr-2 ${statusColors[subtask.status]}`} />
+                                    <span className="mr-1">{subtask.title}</span>
+                                    <span className="text-xs ml-auto">
+                                      {subtask.status.replace(/-/g, ' ')}
+                                    </span>
+                                  </li>
+                                );
+                              })}
                             </ul>
                           </div>
                         )}
@@ -109,6 +137,24 @@ const InProgressTracker = () => {
       )}
     </div>
   );
+};
+
+// Helper function to calculate days remaining
+const getDaysRemaining = (dueDate: Date) => {
+  if (!dueDate) return null;
+  const today = new Date();
+  const due = new Date(dueDate);
+  const diffTime = due.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays;
+};
+
+// Helper function to get style for due days
+const getDueStyle = (days: number | null) => {
+  if (days === null) return '';
+  if (days <= 0) return 'ml-1 text-red-500 font-medium';
+  if (days <= 2) return 'ml-1 text-yellow-600 font-medium';
+  return 'ml-1 text-green-600 font-medium';
 };
 
 export default InProgressTracker;

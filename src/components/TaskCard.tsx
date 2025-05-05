@@ -56,24 +56,29 @@ const TaskCard = ({ task, projectColor, viewMode }: TaskCardProps) => {
     if (!task.dueDate) return null;
     const today = new Date();
     const dueDate = new Date(task.dueDate);
-    return differenceInDays(dueDate, today);
+    const diffTime = dueDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
   };
   
   const daysRemaining = getDaysRemaining();
   
   // Get color for countdown based on days remaining
-  const getCountdownColor = () => {
-    if (daysRemaining === null) return 'bg-gray-300';
-    if (daysRemaining <= 0) return 'bg-red-500';
-    if (daysRemaining <= 2) return 'bg-yellow-500';
-    return 'bg-green-500';
+  const getDueColor = () => {
+    if (daysRemaining === null) return 'text-gray-500';
+    if (daysRemaining <= 0) return 'text-red-500 font-medium';
+    if (daysRemaining <= 2) return 'text-yellow-600 font-medium';
+    return 'text-green-600 font-medium';
   };
   
-  // Calculate countdown progress (inverse of time remaining)
-  const getCountdownProgress = () => {
-    if (daysRemaining === null) return 0;
-    // Use 10 days as the maximum scale
-    return Math.max(0, Math.min(100, (10 - Math.min(daysRemaining, 10)) * 10));
+  // Subtask status styles
+  const getSubtaskStatusStyle = (status: string) => {
+    switch (status) {
+      case 'not-started': return 'bg-gray-200 text-gray-700';
+      case 'in-progress': return 'bg-blue-100 text-blue-700';
+      case 'completed': return 'bg-green-100 text-green-700';
+      default: return 'bg-gray-100 text-gray-700';
+    }
   };
   
   // Permissions
@@ -122,6 +127,13 @@ const TaskCard = ({ task, projectColor, viewMode }: TaskCardProps) => {
                 <Clock size={12} className="mr-1" />
                 <span>{formattedDueDate}</span>
                 
+                {/* Days remaining counter */}
+                {daysRemaining !== null && (
+                  <span className={`ml-1 ${getDueColor()}`}>
+                    ({daysRemaining} {daysRemaining === 1 ? 'day' : 'days'} left)
+                  </span>
+                )}
+                
                 {task.subtasks.length > 0 && (
                   <>
                     <div className="mx-2">|</div>
@@ -161,13 +173,20 @@ const TaskCard = ({ task, projectColor, viewMode }: TaskCardProps) => {
             ></div>
           </div>
           
-          {/* Due date countdown */}
-          {task.dueDate && (
-            <div className="w-full h-0.5 bg-gray-100">
-              <div 
-                className={`h-full ${getCountdownColor()}`} 
-                style={{ width: `${getCountdownProgress()}%` }}
-              ></div>
+          {/* Show subtasks if any */}
+          {task.subtasks.length > 0 && (
+            <div className="mt-2 space-y-1">
+              <div className="text-xs font-medium text-gray-500">Subtasks:</div>
+              <div className="flex flex-wrap gap-1">
+                {task.subtasks.map(subtask => (
+                  <span 
+                    key={subtask.id}
+                    className={`text-xs px-1.5 py-0.5 rounded-sm ${getSubtaskStatusStyle(subtask.status)}`}
+                  >
+                    {subtask.title}
+                  </span>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -236,9 +255,10 @@ const TaskCard = ({ task, projectColor, viewMode }: TaskCardProps) => {
             <div className="text-xs text-gray-500 flex items-center">
               <Clock size={12} className="mr-1" />
               {formattedDueDate}
-              {daysRemaining !== null && daysRemaining <= 2 && (
-                <span className={daysRemaining <= 0 ? "text-red-500 ml-1 font-medium" : "text-yellow-600 ml-1 font-medium"}>
-                  {daysRemaining <= 0 ? "Overdue!" : `${daysRemaining}d left`}
+              {/* Days remaining counter */}
+              {daysRemaining !== null && (
+                <span className={`ml-1 ${getDueColor()}`}>
+                  ({daysRemaining} {daysRemaining === 1 ? 'day' : 'days'} left)
                 </span>
               )}
             </div>
@@ -249,18 +269,9 @@ const TaskCard = ({ task, projectColor, viewMode }: TaskCardProps) => {
           {/* Task completion progress */}
           <Progress 
             value={task.progress} 
-            className="h-1 mb-1"
+            className="h-1 mb-3"
             indicatorClassName={task.status === 'completed' ? 'bg-status-completed' : 'bg-status-inProgress'}
           />
-          
-          {/* Due date countdown progress */}
-          {task.dueDate && (
-            <Progress 
-              value={getCountdownProgress()} 
-              className="h-1 mb-2"
-              indicatorClassName={getCountdownColor()}
-            />
-          )}
           
           <div className="flex justify-between items-center">
             <div className="text-xs text-gray-600 flex items-center">
@@ -276,6 +287,23 @@ const TaskCard = ({ task, projectColor, viewMode }: TaskCardProps) => {
               {task.progress}%
             </div>
           </div>
+          
+          {/* Show subtasks directly in the card */}
+          {task.subtasks.length > 0 && (
+            <div className="mt-2">
+              <div className="text-xs font-medium text-gray-500 mb-1">Subtasks:</div>
+              <div className="flex flex-wrap gap-1">
+                {task.subtasks.map(subtask => (
+                  <span 
+                    key={subtask.id}
+                    className={`text-xs px-1.5 py-0.5 rounded-sm ${getSubtaskStatusStyle(subtask.status)}`}
+                  >
+                    {subtask.title}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
         
         {/* Notes preview that shows on hover */}

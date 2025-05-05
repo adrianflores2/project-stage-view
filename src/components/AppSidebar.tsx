@@ -25,11 +25,11 @@ export function AppSidebar() {
 
   return (
     <>
-      <Sidebar>
+      <Sidebar className="sidebar-glass">
         <SidebarHeader>
           <div className="flex items-center space-x-2 px-2">
-            <Kanban className="h-6 w-6" />
-            <span className="text-lg font-semibold">Task Manager</span>
+            <Kanban className="h-6 w-6 text-white" />
+            <span className="text-lg font-semibold text-white">Task Manager</span>
           </div>
         </SidebarHeader>
 
@@ -40,6 +40,7 @@ export function AppSidebar() {
                 <SidebarMenuButton
                   isActive={location.pathname === '/'}
                   tooltip="Task Board"
+                  className="text-sidebar-foreground hover:text-white"
                 >
                   <Kanban className="h-4 w-4" />
                   <span>Task Board</span>
@@ -52,6 +53,7 @@ export function AppSidebar() {
                 <SidebarMenuButton
                   isActive={location.pathname === '/projects'}
                   tooltip="Projects"
+                  className="text-sidebar-foreground hover:text-white"
                 >
                   <Plus className="h-4 w-4" />
                   <span>Projects</span>
@@ -64,6 +66,7 @@ export function AppSidebar() {
                 <SidebarMenuButton
                   isActive={location.pathname === '/in-progress'}
                   tooltip="In Progress"
+                  className="text-sidebar-foreground hover:text-white"
                 >
                   <CalendarIcon className="h-4 w-4" />
                   <span>In Progress</span>
@@ -76,6 +79,7 @@ export function AppSidebar() {
                 <SidebarMenuButton
                   isActive={location.pathname === '/reports'}
                   tooltip="Reports"
+                  className="text-sidebar-foreground hover:text-white"
                 >
                   <FileText className="h-4 w-4" />
                   <span>Reports</span>
@@ -88,6 +92,7 @@ export function AppSidebar() {
                 <SidebarMenuButton
                   isActive={location.pathname === '/daily-activity'}
                   tooltip="Daily Activity"
+                  className="text-sidebar-foreground hover:text-white"
                 >
                   <Calendar className="h-4 w-4" />
                   <span>Daily Activity</span>
@@ -100,6 +105,7 @@ export function AppSidebar() {
                 <SidebarMenuButton
                   onClick={() => setShowUserManagement(true)}
                   tooltip="User Management"
+                  className="text-sidebar-foreground hover:text-white"
                 >
                   <Users className="h-4 w-4" />
                   <span>User Management</span>
@@ -112,12 +118,12 @@ export function AppSidebar() {
         <SidebarFooter>
           <div className="flex flex-col gap-y-2 px-2">
             {currentUser && (
-              <div className="flex items-center justify-between gap-2 rounded-lg bg-muted p-2">
+              <div className="flex items-center justify-between gap-2 rounded-lg bg-sidebar-accent p-2">
                 <div className="flex items-center gap-2">
-                  <User className="h-6 w-6" />
+                  <User className="h-6 w-6 text-white" />
                   <div className="space-y-0.5">
-                    <p className="text-xs font-medium">{currentUser.name}</p>
-                    <p className="text-xs text-muted-foreground capitalize">{currentUser.role}</p>
+                    <p className="text-xs font-medium text-white">{currentUser.name}</p>
+                    <p className="text-xs text-gray-300 capitalize">{currentUser.role}</p>
                   </div>
                 </div>
                 <Button
@@ -125,8 +131,9 @@ export function AppSidebar() {
                   size="icon"
                   onClick={logout}
                   title="Logout"
+                  className="text-gray-300 hover:text-white hover:bg-sidebar-accent/80"
                 >
-                  <Lock className="h-5 w-5 text-muted-foreground" />
+                  <Lock className="h-5 w-5" />
                 </Button>
               </div>
             )}

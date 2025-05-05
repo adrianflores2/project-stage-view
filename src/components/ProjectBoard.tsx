@@ -10,14 +10,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { User, Filter, Plus, Kanban } from 'lucide-react';
+import { User, Filter, Plus, Kanban, Check } from 'lucide-react';
 import CreateTaskDialog from './CreateTaskDialog';
+import { Task } from '@/types';
 
 const ProjectBoard = () => {
   const { currentUser, projects, users, getFilteredTasks } = useAppContext();
   const [selectedUserId, setSelectedUserId] = useState<string | undefined>(undefined);
   const [showCreateTask, setShowCreateTask] = useState(false);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid'); // Changed default to 'grid'
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [showCompleted, setShowCompleted] = useState(false);
   
   // Determine which users can be filtered based on role
   let filterableUsers = [];
@@ -28,14 +30,27 @@ const ProjectBoard = () => {
   }
   
   // Get tasks based on filters
-  const getTasksForProject = (projectId: string) => {
+  const getTasksForProject = (projectId: string, includeCompleted: boolean) => {
     // For workers, always filter by their ID
+    let tasks = [];
     if (currentUser?.role === 'worker') {
-      return getFilteredTasks(projectId, currentUser.id);
+      tasks = getFilteredTasks(projectId, currentUser.id);
+    } else {
+      // For others, apply the selected user filter if any
+      tasks = getFilteredTasks(projectId, selectedUserId);
     }
-    // For others, apply the selected user filter if any
-    return getFilteredTasks(projectId, selectedUserId);
+    
+    // Filter completed tasks
+    return includeCompleted
+      ? tasks.filter(task => task.status === 'completed')
+      : tasks.filter(task => task.status !== 'completed');
   };
+  
+  // Group projects with completed tasks
+  const projectsWithCompletedTasks = projects.filter(project => {
+    const completedTasks = getTasksForProject(project.id, true);
+    return completedTasks.length > 0;
+  });
   
   return (
     <div className="p-4">
@@ -102,21 +117,77 @@ const ProjectBoard = () => {
           </div>
           
           {currentUser?.role === 'coordinator' && (
-            <Button onClick={() => setShowCreateTask(true)} className="bg-violet-500 hover:bg-violet-600">
+            <Button onClick={() => setShowCreateTask(true)} className="bg-accent hover:bg-accent/90">
               <Plus size={16} className="mr-1" /> New Task
             </Button>
           )}
         </div>
       </div>
       
-      {projects.map(project => (
-        <ProjectColumn 
-          key={project.id} 
-          project={project} 
-          tasks={getTasksForProject(project.id)}
-          viewMode={viewMode}
-        />
-      ))}
+      {/* Active Projects */}
+      <div className="mb-8">
+        {projects.map(project => (
+          <ProjectColumn 
+            key={project.id} 
+            project={project} 
+            tasks={getTasksForProject(project.id, false)}
+            viewMode={viewMode}
+          />
+        ))}
+      </div>
+      
+      {/* Completed Tasks Section */}
+      {projectsWithCompletedTasks.length > 0 && (
+        <div className="mt-10 pt-4 border-t border-gray-200">
+          <div className="flex items-center mb-4">
+            <Check className="text-status-completed mr-2" />
+            <h2 className="text-xl font-semibold">Completed Tasks</h2>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => setShowCompleted(!showCompleted)}
+              className="ml-3"
+            >
+              {showCompleted ? "Hide" : "Show"}
+            </Button>
+          </div>
+          
+          {showCompleted && (
+            <div className="space-y-6 mt-2">
+              {projectsWithCompletedTasks.map(project => (
+                <div key={`completed-${project.id}`} className="bg-gray-50/50 p-4 rounded-lg">
+                  <div className="flex items-center mb-3">
+                    <span 
+                      className="w-3 h-3 rounded-full mr-2" 
+                      style={{ backgroundColor: project.color }}
+                    ></span>
+                    <h3 className="text-md font-medium">{project.name}</h3>
+                  </div>
+                  <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3' : 'space-y-1'}>
+                    {getTasksForProject(project.id, true).map(task => (
+                      <div 
+                        key={task.id} 
+                        className="bg-white border rounded-md p-3 flex items-center shadow-sm"
+                        style={{ borderLeftColor: project.color, borderLeftWidth: '3px' }}
+                      >
+                        <Check className="text-status-completed mr-2 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{task.title}</p>
+                          <p className="text-xs text-gray-500">
+                            Completed: {task.completedDate 
+                              ? new Date(task.completedDate).toLocaleDateString() 
+                              : 'Unknown date'}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       
       {/* Create Task Dialog */}
       {currentUser?.role === 'coordinator' && (

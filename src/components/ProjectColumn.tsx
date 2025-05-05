@@ -27,8 +27,18 @@ const ProjectColumn = ({ project, tasks, viewMode }: ProjectColumnProps) => {
     return null; // No stages with tasks to show
   }
 
+  // Create a light background color for project tint
+  const getBackgroundTint = (color: string) => {
+    // Convert hex to RGB with opacity
+    const hex = color.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, 0.08)`;
+  };
+
   return (
-    <div className="mb-8">
+    <div className="mb-8 project-section">
       <div className="flex items-center mb-4">
         <span 
           className="w-3 h-3 rounded-full mr-2" 
@@ -42,8 +52,8 @@ const ProjectColumn = ({ project, tasks, viewMode }: ProjectColumnProps) => {
           {stagesToShow.map(stage => (
             <div 
               key={`${project.id}-${stage}`} 
-              className="bg-gray-50 p-4 rounded-lg"
-              style={{ backgroundColor: `rgba(${project.color.replace('#', '').match(/../g)?.map(hex => parseInt(hex, 16)).join(', ')}, 0.05)` }}
+              className="bg-gray-50 p-4 rounded-lg shadow-sm"
+              style={{ backgroundColor: getBackgroundTint(project.color) }}
             >
               <h3 className="text-sm font-medium text-gray-500 mb-3">{stage}</h3>
               <div className="space-y-3">
@@ -64,7 +74,10 @@ const ProjectColumn = ({ project, tasks, viewMode }: ProjectColumnProps) => {
           {stagesToShow.map(stage => (
             <div key={`${project.id}-${stage}`}>
               <h3 className="text-sm font-medium text-gray-500 mb-2">{stage}</h3>
-              <div className="space-y-1 mb-6">
+              <div 
+                className="space-y-1 mb-6 p-3 rounded-lg" 
+                style={{ backgroundColor: getBackgroundTint(project.color) }}
+              >
                 {tasksByStage[stage].map(task => (
                   <TaskCard 
                     key={task.id} 

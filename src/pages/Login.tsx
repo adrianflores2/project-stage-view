@@ -2,13 +2,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '@/context/AppContext';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle 
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -20,30 +20,30 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const { login } = useAppContext();
   const navigate = useNavigate();
-  const handleLogin = async () => {
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const success = login(email, password);
-    
-    if (success) {
-      toast({
-        title: "Login successful",
-        description: "Welcome back!"
-      });
-      navigate('/');
-    } else {
+    if (error) {
       toast({
         title: "Login failed",
-        description: "Invalid email or password",
-        variant: "destructive"
+        description: error.message,
+        variant: "destructive",
       });
+      return;
     }
+
+    login(data); // o ajusta según tu contexto
+    toast({
+      title: "Login successful",
+      description: "Welcome back!",
+    });
+    navigate('/');
   };
 
   return (
@@ -61,23 +61,23 @@ const Login = () => {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="email" className="text-sm font-medium">Email</label>
-              <Input 
-                id="email" 
-                type="email" 
-                placeholder="email@example.com" 
-                value={email} 
+              <Input
+                id="email"
+                type="email"
+                placeholder="email@example.com"
+                value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                required 
+                required
               />
             </div>
             <div className="space-y-2">
               <label htmlFor="password" className="text-sm font-medium">Password</label>
-              <Input 
-                id="password" 
-                type="password" 
-                value={password} 
+              <Input
+                id="password"
+                type="password"
+                value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                required 
+                required
               />
             </div>
           </CardContent>
@@ -91,3 +91,4 @@ const Login = () => {
 };
 
 export default Login;
+

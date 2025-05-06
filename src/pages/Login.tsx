@@ -20,6 +20,11 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const { login } = useAppContext();
   const navigate = useNavigate();
+  const handleLogin = async () => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

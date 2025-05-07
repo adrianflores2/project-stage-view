@@ -1,0 +1,110 @@
+
+import { Report, Task, SubTask } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/components/ui/use-toast';
+
+export function useReportOperations(
+  tasks: Task[],
+  reports: Report[],
+  setReportsList: React.Dispatch<React.SetStateAction<Report[]>>,
+  currentUser: any
+) {
+  const { toast } = useToast();
+  
+  const generateReport = async (taskId: string, message: string) => {
+    if (!currentUser) return;
+    
+    try {
+      // Create report in Supabase
+      const { data: newReport, error } = await supabase
+        .from('reports')
+        .insert({
+          user_id: currentUser.id,
+          message: message,
+          date: new Date()
+        })
+        .select()
+        .single();
+        
+      if (error) throw error;
+      
+      // Get all completed tasks and subtasks for the current user from today
+      const today = new Date();
+      const todaysCompletedTasks = tasks.filter(t => 
+        (t.assignedTo || t.assigned_to) === currentUser.id &&
+        t.status === 'completed' &&
+        (t.completedDate || t.completed_date) &&
+        new Date((t.completedDate || t.completed_date)!).toDateString() === today.toDateString()
+      );
+      
+      // Add tasks to report_tasks
+      if (todaysCompletedTasks.length > 0) {
+        const taskLinks = todaysCompletedTasks.map(task => ({
+          report_id: newReport.id,
+          task_id: task.id
+        }));
+        
+        await supabase
+          .from('report_tasks')
+          .insert(taskLinks);
+      }
+      
+      // Get all subtasks completed today
+      const completedSubtasks: SubTask[] = [];
+      tasks
+        .filter(t => (t.assignedTo || t.assigned_to) === currentUser.id)
+        .forEach(t => {
+          const completed = t.subtasks.filter(st => st.status === 'completed');
+          completedSubtasks.push(...completed);
+        });
+      
+      // Add subtasks to report_subtasks
+      if (completedSubtasks.length > 0) {
+        const subtaskLinks = completedSubtasks.map(subtask => ({
+          report_id: newReport.id,
+          subtask_id: subtask.id
+        }));
+        
+        await supabase
+          .from('report_subtasks')
+          .insert(subtaskLinks);
+      }
+      
+      // Format report for state
+      const formattedReport: Report = {
+        id: newReport.id,
+        userId: currentUser.id,
+        userName: currentUser.name,
+        date: newReport.date,
+        message: newReport.message,
+        completedTasks: todaysCompletedTasks,
+        completedSubtasks: completedSubtasks
+      };
+      
+      setReportsList(prev => [...prev, formattedReport]);
+      
+      toast({
+        title: "Report generated",
+        description: "Your daily report has been submitted successfully."
+      });
+    } catch (error: any) {
+      console.error("Error generating report:", error);
+      toast({
+        title: "Failed to generate report",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const getReports = () => {
+    if (currentUser?.role === 'worker') {
+      // Workers can only see their own reports
+      return reports.filter(report => report.userId === currentUser.id);
+    }
+    // Coordinators and Supervisors can see all reports
+    return reports;
+  };
+
+  return { generateReport, getReports };
+}

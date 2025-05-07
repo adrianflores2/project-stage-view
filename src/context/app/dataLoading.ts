@@ -146,11 +146,10 @@ export function useDataLoading(
       setReportsList(reports);
       setDataLoaded(true);
       
-      // Fix: Remove the second argument (options object) from the toast call
+      // Fix: Remove the 'id' property since it's not part of the Toast type
       toast({
         title: "Data loaded successfully",
-        description: `Loaded ${users.length} users, ${projects.length} projects, and ${tasks.length} tasks`,
-        id: "data-loaded" // Keep the ID as part of the first argument object
+        description: `Loaded ${users.length} users, ${projects.length} projects, and ${tasks.length} tasks`
       });
       
     } catch (error) {

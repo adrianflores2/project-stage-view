@@ -8,15 +8,18 @@ import { format } from 'date-fns';
 
 const InProgressTracker = () => {
   const { getTasksInProgress, getUserById, getProjectById } = useAppContext();
-  const tasksInProgress = getTasksInProgress();
+  const tasksInProgress = getTasksInProgress().filter(task => 
+    task.status === 'in-progress' || 
+    task.subtasks.some(subtask => subtask.status === 'in-progress')
+  );
   
   // Group tasks by project
   const tasksByProject: Record<string, Task[]> = {};
   tasksInProgress.forEach(task => {
-    if (!tasksByProject[task.projectId]) {
-      tasksByProject[task.projectId] = [];
+    if (!tasksByProject[task.project_id]) {
+      tasksByProject[task.project_id] = [];
     }
-    tasksByProject[task.projectId].push(task);
+    tasksByProject[task.project_id].push(task);
   });
   
   return (
@@ -54,7 +57,7 @@ const InProgressTracker = () => {
               <CardContent>
                 <div className="space-y-4">
                   {tasks.map(task => {
-                    const assignedUser = getUserById(task.assignedTo);
+                    const assignedUser = getUserById(task.assigned_to);
                     const inProgressSubtasks = task.subtasks.filter(st => st.status === 'in-progress');
                     
                     return (
@@ -70,12 +73,12 @@ const InProgressTracker = () => {
                           <User size={14} className="mr-1" />
                           {assignedUser?.name}
                           
-                          {task.dueDate && (
+                          {task.due_date && (
                             <span className="ml-4 flex items-center">
-                              Due: {format(new Date(task.dueDate), 'MMM d')}
-                              {getDaysRemaining(task.dueDate) !== null && (
-                                <span className={getDueStyle(getDaysRemaining(task.dueDate))}>
-                                  ({getDaysRemaining(task.dueDate)} days left)
+                              Due: {format(new Date(task.due_date), 'MMM d')}
+                              {getDaysRemaining(task.due_date) !== null && (
+                                <span className={getDueStyle(getDaysRemaining(task.due_date))}>
+                                  ({getDaysRemaining(task.due_date)} days left)
                                 </span>
                               )}
                             </span>
@@ -92,33 +95,22 @@ const InProgressTracker = () => {
                           </div>
                         </div>
                         
-                        {/* Show all subtasks */}
-                        {task.subtasks.length > 0 && (
+                        {/* Show only in-progress subtasks */}
+                        {inProgressSubtasks.length > 0 && (
                           <div className="mt-3">
                             <div className="text-sm font-medium mb-2">
-                              Subtasks:
+                              In-Progress Subtasks:
                             </div>
                             <ul className="grid grid-cols-1 md:grid-cols-2 gap-1">
-                              {task.subtasks.map(subtask => {
-                                const statusColors = {
-                                  'not-started': 'bg-gray-200',
-                                  'in-progress': 'bg-status-inProgress',
-                                  'completed': 'bg-status-completed',
-                                };
-                                
-                                return (
-                                  <li 
-                                    key={subtask.id} 
-                                    className="text-xs flex items-center py-1 px-2 bg-gray-50 rounded border border-gray-200"
-                                  >
-                                    <Check size={12} className={`mr-2 ${statusColors[subtask.status]}`} />
-                                    <span className="mr-1">{subtask.title}</span>
-                                    <span className="text-xs ml-auto">
-                                      {subtask.status.replace(/-/g, ' ')}
-                                    </span>
-                                  </li>
-                                );
-                              })}
+                              {inProgressSubtasks.map(subtask => (
+                                <li 
+                                  key={subtask.id} 
+                                  className="text-xs flex items-center py-1 px-2 bg-gray-50 rounded border border-blue-200"
+                                >
+                                  <Check size={12} className="mr-2 bg-status-inProgress" />
+                                  <span className="mr-1">{subtask.title}</span>
+                                </li>
+                              ))}
                             </ul>
                           </div>
                         )}

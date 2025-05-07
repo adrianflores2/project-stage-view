@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect } from
 import { User, Task, Project, SubTask, Note, Report } from '@/types';
 import { users as initialUsers, tasks as initialTasks, projects as initialProjects } from '@/data/mockData';
 import { useToast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AppContextProps {
   currentUser: User | null;
@@ -11,7 +12,7 @@ interface AppContextProps {
   projects: Project[];
   reports: Report[];
   isAuthenticated: boolean;
-  login: (email: string, password: string) => boolean;
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   setCurrentUser: (user: User) => void;
   getUserByName: (name: string) => User | undefined;
@@ -20,18 +21,22 @@ interface AppContextProps {
   getFilteredTasks: (projectId?: string, assignedTo?: string) => Task[];
   getTasksInProgress: () => Task[];
   getCompletedTasksByDate: (date: Date) => Task[];
-  addTask: (task: Omit<Task, 'id' | 'assignedDate' | 'progress'>) => void;
-  updateTask: (task: Task) => void;
-  addSubtask: (taskId: string, subtask: Omit<SubTask, 'id'>) => void;
-  updateSubtask: (taskId: string, subtask: SubTask) => void;
-  addNote: (taskId: string, content: string) => void;
-  addProject: (project: Omit<Project, 'id'>) => void;
-  updateProject: (project: Project) => void;
-  addUser: (user: Omit<User, 'id'>) => void;
-  removeUser: (userId: string) => void;
+  addTask: (task: Omit<Task, 'id' | 'assignedDate' | 'progress'>) => Promise<void>;
+  updateTask: (task: Task) => Promise<void>;
+  deleteTask: (taskId: string) => Promise<void>;
+  deleteProject: (projectId: string) => Promise<void>;
+  reassignTask: (taskId: string, newAssigneeId: string) => Promise<void>;
+  addSubtask: (taskId: string, subtask: Omit<SubTask, 'id'>) => Promise<void>;
+  updateSubtask: (taskId: string, subtask: SubTask) => Promise<void>;
+  addNote: (taskId: string, content: string) => Promise<void>;
+  addProject: (project: Omit<Project, 'id'>) => Promise<void>;
+  updateProject: (project: Project) => Promise<void>;
+  addUser: (user: Omit<User, 'id'>) => Promise<void>;
+  removeUser: (userId: string) => Promise<void>;
   calculateTaskProgress: (task: Task) => number;
-  generateReport: (taskId: string, message: string) => void;
+  generateReport: (taskId: string, message: string) => Promise<void>;
   getReports: () => Report[];
+  loadInitialData: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextProps | undefined>(undefined);
@@ -43,39 +48,217 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [projectsList, setProjectsList] = useState<Project[]>(initialProjects);
   const [reportsList, setReportsList] = useState<Report[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
   const { toast } = useToast();
   
   // Check for saved authentication on component mount
   useEffect(() => {
-    const savedUser = localStorage.getItem('currentUser');
-    if (savedUser) {
-      try {
-        const parsedUser = JSON.parse(savedUser);
-        setCurrentUser(parsedUser);
-        setIsAuthenticated(true);
-      } catch (error) {
-        console.error("Failed to parse saved user:", error);
+    const checkAuth = async () => {
+      const { data } = await supabase.auth.getSession();
+      
+      if (data.session) {
+        // Fetch user profile from our users table
+        const { data: userData, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', data.session.user.id)
+          .single();
+          
+        if (!error && userData) {
+          setCurrentUser(userData);
+          setIsAuthenticated(true);
+          await loadInitialData();
+        } else {
+          console.error("Error fetching user data:", error);
+          logout();
+        }
       }
-    }
+    };
+    
+    checkAuth();
   }, []);
 
-  const login = (email: string, password: string) => {
-    const user = usersList.find(u => 
-      u.email.toLowerCase() === email.toLowerCase() && 
-      u.password === password
-    );
-    
-    if (user) {
-      setCurrentUser(user);
-      setIsAuthenticated(true);
-      localStorage.setItem('currentUser', JSON.stringify(user));
-      return true;
+  // Load data from Supabase
+  const loadInitialData = async () => {
+    try {
+      // Load users
+      const { data: usersData, error: usersError } = await supabase
+        .from('users')
+        .select('*');
+        
+      if (usersError) throw usersError;
+      setUsersList(usersData);
+      
+      // Load projects
+      const { data: projectsData, error: projectsError } = await supabase
+        .from('projects')
+        .select('*');
+        
+      if (projectsError) throw projectsError;
+      
+      // Load project stages for each project
+      const projectsWithStages = await Promise.all(projectsData.map(async (project) => {
+        const { data: stagesData, error: stagesError } = await supabase
+          .from('project_stages')
+          .select('*')
+          .eq('project_id', project.id)
+          .order('display_order', { ascending: true });
+          
+        if (stagesError) throw stagesError;
+        
+        return {
+          ...project,
+          stages: stagesData.map(stage => stage.name)
+        };
+      }));
+      
+      setProjectsList(projectsWithStages);
+      
+      // Load tasks with their subtasks and notes
+      const { data: tasksData, error: tasksError } = await supabase
+        .from('tasks')
+        .select('*');
+        
+      if (tasksError) throw tasksError;
+      
+      const tasksWithDetails = await Promise.all(tasksData.map(async (task) => {
+        // Get subtasks
+        const { data: subtasksData, error: subtasksError } = await supabase
+          .from('subtasks')
+          .select('*')
+          .eq('task_id', task.id);
+          
+        if (subtasksError) throw subtasksError;
+        
+        // Get notes
+        const { data: notesData, error: notesError } = await supabase
+          .from('notes')
+          .select('*, users!notes_author_id_fkey(name)')
+          .eq('task_id', task.id);
+          
+        if (notesError) throw notesError;
+        
+        // Format notes with author name
+        const formattedNotes = notesData.map(note => ({
+          id: note.id,
+          content: note.content,
+          author: note.users?.name || 'Unknown',
+          createdAt: note.created_at
+        }));
+        
+        // Get project stage name
+        let projectStage = "";
+        if (task.project_stage_id) {
+          const { data: stageData } = await supabase
+            .from('project_stages')
+            .select('name')
+            .eq('id', task.project_stage_id)
+            .single();
+            
+          if (stageData) {
+            projectStage = stageData.name;
+          }
+        }
+        
+        return {
+          ...task,
+          projectStage,
+          subtasks: subtasksData,
+          notes: formattedNotes
+        };
+      }));
+      
+      setTasksList(tasksWithDetails);
+      
+      // Load reports
+      const { data: reportsData, error: reportsError } = await supabase
+        .from('reports')
+        .select('*, users!reports_user_id_fkey(name)');
+        
+      if (reportsError) throw reportsError;
+      
+      const reportsWithDetails = await Promise.all(reportsData.map(async (report) => {
+        // Get report tasks
+        const { data: reportTasksData } = await supabase
+          .from('report_tasks')
+          .select('tasks(*)')
+          .eq('report_id', report.id);
+          
+        // Get report subtasks
+        const { data: reportSubtasksData } = await supabase
+          .from('report_subtasks')
+          .select('subtasks(*)')
+          .eq('report_id', report.id);
+          
+        return {
+          id: report.id,
+          userId: report.user_id,
+          userName: report.users?.name || 'Unknown',
+          date: report.date,
+          message: report.message,
+          completedTasks: reportTasksData?.map(rt => rt.tasks) || [],
+          completedSubtasks: reportSubtasksData?.map(rs => rs.subtasks) || []
+        };
+      }));
+      
+      setReportsList(reportsWithDetails);
+      setDataLoaded(true);
+      
+    } catch (error) {
+      console.error("Error loading data:", error);
+      toast({
+        title: "Data loading error",
+        description: "Failed to load data from the database. Using demo data instead.",
+        variant: "destructive"
+      });
+      
+      // Fall back to mock data
+      setUsersList(initialUsers);
+      setTasksList(initialTasks);
+      setProjectsList(initialProjects);
+      setReportsList([]);
     }
-    
-    return false;
   };
   
-  const logout = () => {
+  // Supabase login
+  const login = async (email: string, password: string) => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data?.user) {
+        // Fetch user from our users table
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('email', email)
+          .single();
+          
+        if (!userError && userData) {
+          setCurrentUser(userData);
+          setIsAuthenticated(true);
+          await loadInitialData();
+          return true;
+        } else {
+          console.error("User not found in our database", userError);
+          return false;
+        }
+      }
+      return false;
+    } catch (error) {
+      console.error("Login error:", error);
+      return false;
+    }
+  };
+  
+  const logout = async () => {
+    await supabase.auth.signOut();
     setCurrentUser(null);
     setIsAuthenticated(false);
     localStorage.removeItem('currentUser');
@@ -101,26 +284,28 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     let filtered = [...tasksList];
     
     if (projectId) {
-      filtered = filtered.filter(task => task.projectId === projectId);
+      filtered = filtered.filter(task => task.project_id === projectId);
     }
     
     if (assignedTo) {
-      filtered = filtered.filter(task => task.assignedTo === assignedTo);
+      filtered = filtered.filter(task => task.assigned_to === assignedTo);
     }
     
     return filtered;
   };
 
   const getTasksInProgress = () => {
-    return tasksList.filter(task => task.status === 'in-progress' || 
-      task.subtasks.some(subtask => subtask.status === 'in-progress'));
+    return tasksList.filter(task => 
+      task.status === 'in-progress' || 
+      task.subtasks.some(subtask => subtask.status === 'in-progress')
+    );
   };
   
   const getCompletedTasksByDate = (date: Date) => {
     return tasksList.filter(task => 
       task.status === 'completed' && 
-      task.completedDate && 
-      new Date(task.completedDate).toDateString() === date.toDateString()
+      task.completed_date && 
+      new Date(task.completed_date).toDateString() === date.toDateString()
     );
   };
 
@@ -133,231 +318,678 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return Math.round((completedSubtasks / task.subtasks.length) * 100);
   };
 
-  const addTask = (task: Omit<Task, 'id' | 'assignedDate' | 'progress'>) => {
-    const newTask: Task = {
-      ...task,
-      id: Date.now().toString(),
-      assignedDate: new Date(),
-      progress: 0,
-      notes: [],
-      subtasks: []
-    };
-    
-    setTasksList(prev => [...prev, newTask]);
-    toast({
-      title: "Task created",
-      description: `Task "${newTask.title}" has been created.`
-    });
-  };
-
-  const updateTask = (updatedTask: Task) => {
-    // Calculate the progress before updating
-    const progress = calculateTaskProgress(updatedTask);
-    
-    const taskToUpdate = {
-      ...updatedTask,
-      progress
-    };
-    
-    setTasksList(prev => 
-      prev.map(task => task.id === updatedTask.id ? taskToUpdate : task)
-    );
-    
-    toast({
-      title: "Task updated",
-      description: `Task "${updatedTask.title}" has been updated.`
-    });
-  };
-
-  const addSubtask = (taskId: string, subtask: Omit<SubTask, 'id'>) => {
-    const newSubtask = {
-      ...subtask,
-      id: `${taskId}-${Date.now()}`
-    };
-    
-    setTasksList(prev => 
-      prev.map(task => {
-        if (task.id === taskId) {
-          const updatedTask = {
-            ...task,
-            subtasks: [...task.subtasks, newSubtask]
-          };
-          updatedTask.progress = calculateTaskProgress(updatedTask);
-          return updatedTask;
-        }
-        return task;
-      })
-    );
-    
-    toast({
-      title: "Subtask added",
-      description: "A new subtask has been added."
-    });
-  };
-
-  const updateSubtask = (taskId: string, updatedSubtask: SubTask) => {
-    setTasksList(prev => 
-      prev.map(task => {
-        if (task.id === taskId) {
-          const updatedSubtasks = task.subtasks.map(
-            subtask => subtask.id === updatedSubtask.id ? updatedSubtask : subtask
-          );
-          
-          const updatedTask = {
-            ...task,
-            subtasks: updatedSubtasks
-          };
-          
-          updatedTask.progress = calculateTaskProgress(updatedTask);
-          
-          // If all subtasks are completed, mark the task as completed
-          if (updatedTask.progress === 100 && !updatedTask.completedDate) {
-            updatedTask.status = 'completed';
-            updatedTask.completedDate = new Date();
-          }
-          
-          return updatedTask;
-        }
-        return task;
-      })
-    );
-    
-    toast({
-      title: "Subtask updated",
-      description: "The subtask has been updated."
-    });
-  };
-
-  const addNote = (taskId: string, content: string) => {
-    if (!currentUser) return;
-    
-    const newNote: Note = {
-      id: `${taskId}-note-${Date.now()}`,
-      content,
-      author: currentUser.name,
-      createdAt: new Date()
-    };
-    
-    setTasksList(prev => 
-      prev.map(task => {
-        if (task.id === taskId) {
-          return {
-            ...task,
-            notes: [...task.notes, newNote]
-          };
-        }
-        return task;
-      })
-    );
-    
-    toast({
-      title: "Note added",
-      description: "A new note has been added to the task."
-    });
-  };
-
-  const addProject = (project: Omit<Project, 'id'>) => {
-    const newProject = {
-      ...project,
-      id: Date.now().toString()
-    };
-    
-    setProjectsList(prev => [...prev, newProject]);
-    
-    toast({
-      title: "Project created",
-      description: `Project "${newProject.name}" has been created.`
-    });
-  };
-
-  const updateProject = (updatedProject: Project) => {
-    setProjectsList(prev => 
-      prev.map(project => project.id === updatedProject.id ? updatedProject : project)
-    );
-    
-    toast({
-      title: "Project updated",
-      description: `Project "${updatedProject.name}" has been updated.`
-    });
-  };
-  
-  const addUser = (user: Omit<User, 'id'>) => {
-    const newUser = {
-      ...user,
-      id: Date.now().toString()
-    };
-    
-    setUsersList(prev => [...prev, newUser]);
-    
-    toast({
-      title: "User added",
-      description: `User "${newUser.name}" has been successfully added.`
-    });
-  };
-  
-  const removeUser = (userId: string) => {
-    // Check if user has assigned tasks
-    const hasAssignedTasks = tasksList.some(task => task.assignedTo === userId);
-    
-    if (hasAssignedTasks) {
+  const addTask = async (task: Omit<Task, 'id' | 'assignedDate' | 'progress'>) => {
+    try {
+      // Insert task in Supabase
+      const { data: newTask, error } = await supabase
+        .from('tasks')
+        .insert({
+          title: task.title,
+          description: task.description,
+          assigned_to: task.assignedTo,
+          project_id: task.projectId,
+          project_stage_id: task.projectStageId,
+          status: task.status,
+          priority: task.priority,
+          due_date: task.dueDate
+        })
+        .select()
+        .single();
+        
+      if (error) throw error;
+      
+      // Add newly created task to state with empty subtasks and notes
+      const taskWithDetails = {
+        ...newTask,
+        projectStage: task.projectStage,
+        subtasks: [],
+        notes: [],
+        progress: 0
+      };
+      
+      setTasksList(prev => [...prev, taskWithDetails]);
+      
       toast({
-        title: "Cannot remove user",
-        description: "This user has assigned tasks. Please reassign them first.",
+        title: "Task created",
+        description: `Task "${task.title}" has been created.`
+      });
+    } catch (error: any) {
+      console.error("Error creating task:", error);
+      toast({
+        title: "Failed to create task",
+        description: error.message,
         variant: "destructive"
       });
-      return;
     }
-    
-    setUsersList(prev => prev.filter(user => user.id !== userId));
-    
-    toast({
-      title: "User removed",
-      description: "User has been successfully removed."
-    });
+  };
+
+  const updateTask = async (updatedTask: Task) => {
+    try {
+      // Calculate the progress
+      const progress = calculateTaskProgress(updatedTask);
+      
+      // Update task in Supabase
+      const { error } = await supabase
+        .from('tasks')
+        .update({
+          title: updatedTask.title,
+          description: updatedTask.description,
+          status: updatedTask.status,
+          progress: progress,
+          project_stage_id: updatedTask.projectStageId,
+          priority: updatedTask.priority,
+          due_date: updatedTask.dueDate,
+          completed_date: updatedTask.status === 'completed' ? new Date() : updatedTask.completedDate
+        })
+        .eq('id', updatedTask.id);
+        
+      if (error) throw error;
+      
+      setTasksList(prev => 
+        prev.map(task => task.id === updatedTask.id ? 
+          {...updatedTask, progress} : task)
+      );
+      
+      toast({
+        title: "Task updated",
+        description: `Task "${updatedTask.title}" has been updated.`
+      });
+      
+      // If status changed to completed or not-completed, handle subtasks
+      if (updatedTask.status !== 'completed') {
+        // Delete all subtasks if status is changed
+        await supabase
+          .from('subtasks')
+          .delete()
+          .eq('task_id', updatedTask.id);
+          
+        setTasksList(prev => 
+          prev.map(task => {
+            if (task.id === updatedTask.id) {
+              return {...task, subtasks: []};
+            }
+            return task;
+          })
+        );
+      }
+    } catch (error: any) {
+      console.error("Error updating task:", error);
+      toast({
+        title: "Failed to update task",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
   };
   
-  // New function for generating worker reports
-  const generateReport = (taskId: string, message: string) => {
+  const deleteTask = async (taskId: string) => {
+    try {
+      // First check if user is coordinator
+      if (!currentUser || currentUser.role !== 'coordinator') {
+        toast({
+          title: "Permission denied",
+          description: "Only coordinators can delete tasks",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Delete task in Supabase (cascade will delete subtasks and notes)
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', taskId);
+        
+      if (error) throw error;
+      
+      // Update local state
+      setTasksList(prev => prev.filter(task => task.id !== taskId));
+      
+      toast({
+        title: "Task deleted",
+        description: "The task has been removed successfully"
+      });
+    } catch (error: any) {
+      console.error("Error deleting task:", error);
+      toast({
+        title: "Failed to delete task",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const deleteProject = async (projectId: string) => {
+    try {
+      // First check if user is coordinator
+      if (!currentUser || currentUser.role !== 'coordinator') {
+        toast({
+          title: "Permission denied",
+          description: "Only coordinators can delete projects",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Delete project in Supabase (cascade will delete project stages and tasks)
+      const { error } = await supabase
+        .from('projects')
+        .delete()
+        .eq('id', projectId);
+        
+      if (error) throw error;
+      
+      // Update local state
+      setProjectsList(prev => prev.filter(project => project.id !== projectId));
+      setTasksList(prev => prev.filter(task => task.project_id !== projectId));
+      
+      toast({
+        title: "Project deleted",
+        description: "The project has been removed successfully"
+      });
+    } catch (error: any) {
+      console.error("Error deleting project:", error);
+      toast({
+        title: "Failed to delete project",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const reassignTask = async (taskId: string, newAssigneeId: string) => {
+    try {
+      // First check if user is coordinator
+      if (!currentUser || currentUser.role !== 'coordinator') {
+        toast({
+          title: "Permission denied",
+          description: "Only coordinators can reassign tasks",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Update task in Supabase
+      const { error } = await supabase
+        .from('tasks')
+        .update({ assigned_to: newAssigneeId })
+        .eq('id', taskId);
+        
+      if (error) throw error;
+      
+      // Update local state
+      setTasksList(prev => 
+        prev.map(task => {
+          if (task.id === taskId) {
+            return {...task, assigned_to: newAssigneeId};
+          }
+          return task;
+        })
+      );
+      
+      toast({
+        title: "Task reassigned",
+        description: "The task has been reassigned successfully"
+      });
+    } catch (error: any) {
+      console.error("Error reassigning task:", error);
+      toast({
+        title: "Failed to reassign task",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const addSubtask = async (taskId: string, subtask: Omit<SubTask, 'id'>) => {
+    try {
+      // Insert subtask in Supabase
+      const { data: newSubtask, error } = await supabase
+        .from('subtasks')
+        .insert({
+          task_id: taskId,
+          title: subtask.title,
+          status: subtask.status
+        })
+        .select()
+        .single();
+        
+      if (error) throw error;
+      
+      // Update task progress
+      const taskToUpdate = tasksList.find(task => task.id === taskId);
+      if (taskToUpdate) {
+        const updatedTask = {
+          ...taskToUpdate,
+          subtasks: [...taskToUpdate.subtasks, newSubtask]
+        };
+        
+        const progress = calculateTaskProgress(updatedTask);
+        
+        // Update progress in database
+        await supabase
+          .from('tasks')
+          .update({ progress })
+          .eq('id', taskId);
+        
+        setTasksList(prev => 
+          prev.map(task => {
+            if (task.id === taskId) {
+              return {
+                ...task,
+                subtasks: [...task.subtasks, newSubtask],
+                progress
+              };
+            }
+            return task;
+          })
+        );
+      }
+      
+      toast({
+        title: "Subtask added",
+        description: "A new subtask has been added."
+      });
+    } catch (error: any) {
+      console.error("Error adding subtask:", error);
+      toast({
+        title: "Failed to add subtask",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const updateSubtask = async (taskId: string, updatedSubtask: SubTask) => {
+    try {
+      // Update subtask in Supabase
+      const { error } = await supabase
+        .from('subtasks')
+        .update({ status: updatedSubtask.status })
+        .eq('id', updatedSubtask.id);
+        
+      if (error) throw error;
+      
+      setTasksList(prev => 
+        prev.map(task => {
+          if (task.id === taskId) {
+            const updatedSubtasks = task.subtasks.map(
+              subtask => subtask.id === updatedSubtask.id ? updatedSubtask : subtask
+            );
+            
+            const updatedTask = {
+              ...task,
+              subtasks: updatedSubtasks
+            };
+            
+            const progress = calculateTaskProgress(updatedTask);
+            
+            // Check if all subtasks are completed
+            const allCompleted = updatedSubtasks.every(st => st.status === 'completed');
+            
+            // Update task status and completed date if all subtasks are completed
+            if (allCompleted && !task.completed_date) {
+              supabase
+                .from('tasks')
+                .update({
+                  status: 'completed',
+                  completed_date: new Date(),
+                  progress: 100
+                })
+                .eq('id', taskId)
+                .then();
+              
+              return {
+                ...updatedTask,
+                status: 'completed',
+                completed_date: new Date(),
+                progress: 100
+              };
+            } else {
+              // Just update progress
+              supabase
+                .from('tasks')
+                .update({ progress })
+                .eq('id', taskId)
+                .then();
+                
+              return {
+                ...updatedTask,
+                progress
+              };
+            }
+          }
+          return task;
+        })
+      );
+      
+      toast({
+        title: "Subtask updated",
+        description: "The subtask has been updated."
+      });
+    } catch (error: any) {
+      console.error("Error updating subtask:", error);
+      toast({
+        title: "Failed to update subtask",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const addNote = async (taskId: string, content: string) => {
     if (!currentUser) return;
     
-    const task = tasksList.find(t => t.id === taskId);
-    if (!task) return;
-    
-    // Get all completed tasks and subtasks for the current user from today
-    const today = new Date();
-    const todaysCompletedTasks = tasksList.filter(t => 
-      t.assignedTo === currentUser.id &&
-      t.status === 'completed' &&
-      t.completedDate &&
-      new Date(t.completedDate).toDateString() === today.toDateString()
-    );
-    
-    // Get all subtasks completed today
-    const completedSubtasks = tasksList
-      .filter(t => t.assignedTo === currentUser.id)
-      .flatMap(t => t.subtasks.filter(st => 
-        st.status === 'completed'
-      ));
-    
-    const newReport: Report = {
-      id: Date.now().toString(),
-      userId: currentUser.id,
-      userName: currentUser.name,
-      date: new Date(),
-      message: message,
-      completedTasks: todaysCompletedTasks,
-      completedSubtasks: completedSubtasks
-    };
-    
-    setReportsList(prev => [...prev, newReport]);
-    
-    toast({
-      title: "Report generated",
-      description: "Your daily report has been submitted successfully."
-    });
+    try {
+      // Insert note in Supabase
+      const { data: newNote, error } = await supabase
+        .from('notes')
+        .insert({
+          task_id: taskId,
+          content: content,
+          author_id: currentUser.id
+        })
+        .select('*, users!notes_author_id_fkey(name)')
+        .single();
+        
+      if (error) throw error;
+      
+      const formattedNote = {
+        id: newNote.id,
+        content: newNote.content,
+        author: newNote.users?.name || currentUser.name,
+        createdAt: newNote.created_at
+      };
+      
+      setTasksList(prev => 
+        prev.map(task => {
+          if (task.id === taskId) {
+            return {
+              ...task,
+              notes: [...task.notes, formattedNote]
+            };
+          }
+          return task;
+        })
+      );
+      
+      toast({
+        title: "Note added",
+        description: "A new note has been added to the task."
+      });
+    } catch (error: any) {
+      console.error("Error adding note:", error);
+      toast({
+        title: "Failed to add note",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const addProject = async (project: Omit<Project, 'id'>) => {
+    try {
+      // Insert project in Supabase
+      const { data: newProject, error } = await supabase
+        .from('projects')
+        .insert({
+          name: project.name,
+          color: project.color
+        })
+        .select()
+        .single();
+        
+      if (error) throw error;
+      
+      // Add stages for the project
+      if (project.stages && project.stages.length > 0) {
+        const stagesToInsert = project.stages.map((stage, index) => ({
+          project_id: newProject.id,
+          name: stage,
+          display_order: index
+        }));
+        
+        const { error: stagesError } = await supabase
+          .from('project_stages')
+          .insert(stagesToInsert);
+          
+        if (stagesError) throw stagesError;
+      }
+      
+      // Add to state with stages
+      const projectWithStages = {
+        ...newProject,
+        stages: project.stages || []
+      };
+      
+      setProjectsList(prev => [...prev, projectWithStages]);
+      
+      toast({
+        title: "Project created",
+        description: `Project "${project.name}" has been created.`
+      });
+    } catch (error: any) {
+      console.error("Error creating project:", error);
+      toast({
+        title: "Failed to create project",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const updateProject = async (updatedProject: Project) => {
+    try {
+      // Update project in Supabase
+      const { error } = await supabase
+        .from('projects')
+        .update({
+          name: updatedProject.name,
+          color: updatedProject.color
+        })
+        .eq('id', updatedProject.id);
+        
+      if (error) throw error;
+      
+      // Update stages if changed
+      if (updatedProject.stages) {
+        // First delete existing stages
+        await supabase
+          .from('project_stages')
+          .delete()
+          .eq('project_id', updatedProject.id);
+          
+        // Add new stages
+        const stagesToInsert = updatedProject.stages.map((stage, index) => ({
+          project_id: updatedProject.id,
+          name: stage,
+          display_order: index
+        }));
+        
+        if (stagesToInsert.length > 0) {
+          const { error: stagesError } = await supabase
+            .from('project_stages')
+            .insert(stagesToInsert);
+            
+          if (stagesError) throw stagesError;
+        }
+      }
+      
+      setProjectsList(prev => 
+        prev.map(project => project.id === updatedProject.id ? updatedProject : project)
+      );
+      
+      toast({
+        title: "Project updated",
+        description: `Project "${updatedProject.name}" has been updated.`
+      });
+    } catch (error: any) {
+      console.error("Error updating project:", error);
+      toast({
+        title: "Failed to update project",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
   };
   
-  // Get all reports (for coordinators and supervisors)
+  const addUser = async (user: Omit<User, 'id'>) => {
+    try {
+      // Insert user in Supabase
+      const { data: newUser, error } = await supabase
+        .from('users')
+        .insert({
+          name: user.name,
+          email: user.email,
+          role: user.role
+        })
+        .select()
+        .single();
+        
+      if (error) throw error;
+      
+      setUsersList(prev => [...prev, newUser]);
+      
+      toast({
+        title: "User added",
+        description: `User "${newUser.name}" has been successfully added.`
+      });
+    } catch (error: any) {
+      console.error("Error adding user:", error);
+      toast({
+        title: "Failed to add user",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const removeUser = async (userId: string) => {
+    try {
+      // Check if user has assigned tasks
+      const userTasks = tasksList.filter(task => task.assigned_to === userId);
+      
+      if (userTasks.length > 0) {
+        toast({
+          title: "Cannot remove user",
+          description: "This user has assigned tasks. Please reassign them first.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Delete user from Supabase
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', userId);
+        
+      if (error) throw error;
+      
+      setUsersList(prev => prev.filter(user => user.id !== userId));
+      
+      toast({
+        title: "User removed",
+        description: "User has been successfully removed."
+      });
+    } catch (error: any) {
+      console.error("Error removing user:", error);
+      toast({
+        title: "Failed to remove user",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // Generate worker report
+  const generateReport = async (taskId: string, message: string) => {
+    if (!currentUser) return;
+    
+    try {
+      // Create report in Supabase
+      const { data: newReport, error } = await supabase
+        .from('reports')
+        .insert({
+          user_id: currentUser.id,
+          message: message,
+          date: new Date()
+        })
+        .select()
+        .single();
+        
+      if (error) throw error;
+      
+      // Get all completed tasks and subtasks for the current user from today
+      const today = new Date();
+      const todaysCompletedTasks = tasksList.filter(t => 
+        t.assigned_to === currentUser.id &&
+        t.status === 'completed' &&
+        t.completed_date &&
+        new Date(t.completed_date).toDateString() === today.toDateString()
+      );
+      
+      // Add tasks to report_tasks
+      if (todaysCompletedTasks.length > 0) {
+        const taskLinks = todaysCompletedTasks.map(task => ({
+          report_id: newReport.id,
+          task_id: task.id
+        }));
+        
+        await supabase
+          .from('report_tasks')
+          .insert(taskLinks);
+      }
+      
+      // Get all subtasks completed today
+      const completedSubtasks: SubTask[] = [];
+      tasksList
+        .filter(t => t.assigned_to === currentUser.id)
+        .forEach(t => {
+          const completed = t.subtasks.filter(st => st.status === 'completed');
+          completedSubtasks.push(...completed);
+        });
+      
+      // Add subtasks to report_subtasks
+      if (completedSubtasks.length > 0) {
+        const subtaskLinks = completedSubtasks.map(subtask => ({
+          report_id: newReport.id,
+          subtask_id: subtask.id
+        }));
+        
+        await supabase
+          .from('report_subtasks')
+          .insert(subtaskLinks);
+      }
+      
+      // Format report for state
+      const formattedReport: Report = {
+        id: newReport.id,
+        userId: currentUser.id,
+        userName: currentUser.name,
+        date: newReport.date,
+        message: newReport.message,
+        completedTasks: todaysCompletedTasks,
+        completedSubtasks: completedSubtasks
+      };
+      
+      setReportsList(prev => [...prev, formattedReport]);
+      
+      toast({
+        title: "Report generated",
+        description: "Your daily report has been submitted successfully."
+      });
+    } catch (error: any) {
+      console.error("Error generating report:", error);
+      toast({
+        title: "Failed to generate report",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // Get all reports
   const getReports = () => {
     if (currentUser?.role === 'worker') {
       // Workers can only see their own reports
@@ -386,6 +1018,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       getCompletedTasksByDate,
       addTask,
       updateTask,
+      deleteTask,
+      deleteProject,
+      reassignTask,
       addSubtask,
       updateSubtask,
       addNote,
@@ -395,7 +1030,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       removeUser,
       calculateTaskProgress,
       generateReport,
-      getReports
+      getReports,
+      loadInitialData
     }}>
       {children}
     </AppContext.Provider>

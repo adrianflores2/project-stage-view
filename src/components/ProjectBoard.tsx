@@ -10,16 +10,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { User, Filter, Plus, Kanban, Check } from 'lucide-react';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { User, Filter, Plus, Kanban, Check, Trash } from 'lucide-react';
 import CreateTaskDialog from './CreateTaskDialog';
 import { Task } from '@/types';
 
 const ProjectBoard = () => {
-  const { currentUser, projects, users, getFilteredTasks } = useAppContext();
+  const { currentUser, projects, users, getFilteredTasks, deleteProject } = useAppContext();
   const [selectedUserId, setSelectedUserId] = useState<string | undefined>(undefined);
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showCompleted, setShowCompleted] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
   
   // Determine which users can be filtered based on role
   let filterableUsers = [];
@@ -51,6 +62,13 @@ const ProjectBoard = () => {
     const completedTasks = getTasksForProject(project.id, true);
     return completedTasks.length > 0;
   });
+  
+  const handleDeleteProject = async (projectId: string) => {
+    await deleteProject(projectId);
+    setProjectToDelete(null);
+  };
+  
+  const canDeleteProject = currentUser?.role === 'coordinator';
   
   return (
     <div className="p-4">
@@ -132,6 +150,7 @@ const ProjectBoard = () => {
             project={project} 
             tasks={getTasksForProject(project.id, false)}
             viewMode={viewMode}
+            onDeleteProject={canDeleteProject ? () => setProjectToDelete(project.id) : undefined}
           />
         ))}
       </div>
@@ -174,8 +193,8 @@ const ProjectBoard = () => {
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{task.title}</p>
                           <p className="text-xs text-gray-500">
-                            Completed: {task.completedDate 
-                              ? new Date(task.completedDate).toLocaleDateString() 
+                            Completed: {task.completed_date 
+                              ? new Date(task.completed_date).toLocaleDateString() 
                               : 'Unknown date'}
                           </p>
                         </div>
@@ -196,6 +215,27 @@ const ProjectBoard = () => {
           onOpenChange={setShowCreateTask} 
         />
       )}
+      
+      {/* Delete Project Confirmation */}
+      <AlertDialog open={!!projectToDelete} onOpenChange={(open) => !open && setProjectToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Project</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this project? This will remove all tasks and cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => projectToDelete && handleDeleteProject(projectToDelete)}
+              className="bg-destructive text-destructive-foreground"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

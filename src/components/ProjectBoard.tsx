@@ -40,7 +40,7 @@ const ProjectBoard = () => {
     filterableUsers = [currentUser]; // Workers can only see their own tasks
   }
   
-  // Get tasks based on filters
+  // Get tasks based on filters - fixing the issue with tasks disappearing
   const getTasksForProject = (projectId: string, includeCompleted: boolean) => {
     // For workers, always filter by their ID
     let tasks = [];
@@ -79,6 +79,10 @@ const ProjectBoard = () => {
   };
   
   const canDeleteProject = currentUser?.role === 'coordinator';
+  
+  // Debug log to help troubleshoot the issue
+  console.log("Projects:", projects);
+  console.log("Current user:", currentUser);
   
   return (
     <div className="p-4">

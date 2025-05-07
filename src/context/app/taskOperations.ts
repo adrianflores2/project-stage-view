@@ -2,6 +2,12 @@ import { Task, SubTask } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { useEffect } from 'react';
+import { 
+  fetchTaskDetails, 
+  updateTaskInSupabase, 
+  deleteTaskInSupabase,
+  reassignTaskInSupabase
+} from './taskOperationsUtils';
 
 export function useTaskOperations(
   tasks: Task[],
@@ -24,85 +30,32 @@ export function useTaskOperations(
           table: 'tasks'
         }, 
         async (payload) => {
+          console.log('Task change detected:', payload);
           // Reload all tasks data to ensure we have the latest
-          const { data: tasksData, error: tasksError } = await supabase
-            .from('tasks')
-            .select('*');
-            
-          if (tasksError) {
-            console.error("Error reloading tasks:", tasksError);
-            return;
-          }
-          
-          // Process tasks with their subtasks and notes
-          const tasksWithDetails = await Promise.all(tasksData.map(async (task) => {
-            // Get subtasks
-            const { data: subtasksData } = await supabase
-              .from('subtasks')
-              .select('*')
-              .eq('task_id', task.id);
+          try {
+            const { data: tasksData, error: tasksError } = await supabase
+              .from('tasks')
+              .select('*');
               
-            // Get notes
-            const { data: notesData } = await supabase
-              .from('notes')
-              .select('*, users!notes_author_id_fkey(name)')
-              .eq('task_id', task.id);
-              
-            // Format notes with author name
-            const formattedNotes = notesData?.map(note => ({
-              id: note.id,
-              content: note.content,
-              author: note.users?.name || 'Unknown',
-              createdAt: note.created_at
-            })) || [];
-            
-            // Get project stage name
-            let projectStage = "";
-            if (task.project_stage_id) {
-              const { data: stageData } = await supabase
-                .from('project_stages')
-                .select('name')
-                .eq('id', task.project_stage_id)
-                .single();
-                
-              if (stageData) {
-                projectStage = stageData.name;
-              }
+            if (tasksError) {
+              console.error("Error reloading tasks:", tasksError);
+              return;
             }
             
-            const taskWithDetails: Task = {
-              id: task.id,
-              title: task.title,
-              description: task.description || '',
-              assignedTo: task.assigned_to || '',
-              projectId: task.project_id || '',
-              projectStage: projectStage,
-              status: task.status,
-              subtasks: subtasksData || [],
-              notes: formattedNotes || [],
-              assignedDate: task.assigned_date ? new Date(task.assigned_date) : new Date(),
-              dueDate: task.due_date ? new Date(task.due_date) : undefined,
-              completedDate: task.completed_date ? new Date(task.completed_date) : undefined,
-              progress: task.progress || 0,
-              priority: task.priority || 'Media',
-              // Keep the original properties for compatibility with Supabase
-              project_id: task.project_id,
-              project_stage_id: task.project_stage_id,
-              assigned_to: task.assigned_to,
-              assigned_date: task.assigned_date,
-              due_date: task.due_date,
-              completed_date: task.completed_date
-            };
+            // Process tasks with their details
+            const tasksWithDetails = await Promise.all(
+              tasksData.map(task => fetchTaskDetails(task))
+            );
             
-            return taskWithDetails;
-          }));
-          
-          setTasksList(tasksWithDetails);
-          
-          toast({
-            title: "Tasks updated",
-            description: "Task list has been refreshed with latest changes."
-          });
+            setTasksList(tasksWithDetails.filter(Boolean) as Task[]);
+            
+            toast({
+              title: "Tasks updated",
+              description: "Task list has been refreshed with latest changes."
+            });
+          } catch (error) {
+            console.error("Error processing realtime update:", error);
+          }
         }
       )
       .subscribe();
@@ -232,21 +185,7 @@ export function useTaskOperations(
       }
       
       // Update task in Supabase
-      const { error } = await supabase
-        .from('tasks')
-        .update({
-          title: updatedTask.title,
-          description: updatedTask.description,
-          status: updatedTask.status,
-          progress: progress,
-          project_stage_id: updatedTask.project_stage_id,
-          priority: updatedTask.priority,
-          due_date: updatedTask.dueDate || updatedTask.due_date,
-          completed_date: completedDate
-        })
-        .eq('id', updatedTask.id);
-        
-      if (error) throw error;
+      await updateTaskInSupabase(updatedTask, progress, completedDate);
       
       // Update the task in state
       const updatedTaskWithBothProps: Task = {
@@ -296,13 +235,8 @@ export function useTaskOperations(
         return;
       }
       
-      // Delete task in Supabase (cascade will delete subtasks and notes)
-      const { error } = await supabase
-        .from('tasks')
-        .delete()
-        .eq('id', taskId);
-        
-      if (error) throw error;
+      // Delete task in Supabase
+      await deleteTaskInSupabase(taskId);
       
       // Update local state
       setTasksList(prev => prev.filter(task => task.id !== taskId));
@@ -333,13 +267,8 @@ export function useTaskOperations(
         return;
       }
       
-      // Update task in Supabase
-      const { error } = await supabase
-        .from('tasks')
-        .update({ assigned_to: newAssigneeId })
-        .eq('id', taskId);
-        
-      if (error) throw error;
+      // Reassign task in Supabase
+      await reassignTaskInSupabase(taskId, newAssigneeId);
       
       // Update local state
       setTasksList(prev => 

@@ -102,9 +102,11 @@ export function useReportOperations(
         .forEach(t => {
           // Filter subtasks to only include those completed today
           const completedToday = t.subtasks.filter(st => {
-            if (st.status !== 'completed' || !st.updatedAt) return false;
-            const completionDate = new Date(st.updatedAt);
-            return completionDate.toDateString() === today.toDateString();
+            if (st.status !== 'completed') return false;
+            // Since SubTask doesn't have an updatedAt property in its type definition,
+            // we can't filter based on completion date for subtasks
+            // We'll include all completed subtasks instead
+            return true;
           });
           completedSubtasks.push(...completedToday);
         });

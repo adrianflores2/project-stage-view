@@ -132,28 +132,39 @@ export function useDataLoading(
       
       const reportsWithDetails: Report[] = await Promise.all(reportsData.map(async (report) => {
         // Get report tasks
-        const { data: reportTasksData } = await supabase
+        const { data: reportTasksData, error: reportTasksError } = await supabase
           .from('report_tasks')
-          .select('tasks(*)')
+          .select('*, tasks(*)')
           .eq('report_id', report.id);
           
+        if (reportTasksError) throw reportTasksError;
+        
         // Get report subtasks
-        const { data: reportSubtasksData } = await supabase
+        const { data: reportSubtasksData, error: reportSubtasksError } = await supabase
           .from('report_subtasks')
-          .select('subtasks(*)')
+          .select('*, subtasks(*)')
           .eq('report_id', report.id);
           
+        if (reportSubtasksError) throw reportSubtasksError;
+        
         // Format each task data
-        const completedTasks: Task[] = reportTasksData?.map(rt => {
-          // Fix: Access the tasks property of each item in reportTasksData
+        const completedTasks: Task[] = reportTasksData.map(rt => {
+          // Each reportTasksData item contains a tasks object with task data
           const taskData = rt.tasks;
+          
+          // Check if taskData is valid before accessing its properties
+          if (!taskData) {
+            console.error('Missing task data in report tasks');
+            return null;
+          }
+          
           return {
             id: taskData.id,
             title: taskData.title,
             description: taskData.description || '',
             assignedTo: taskData.assigned_to || '',
             projectId: taskData.project_id || '',
-            projectStage: '',
+            projectStage: '',  // We don't have this data here
             status: taskData.status,
             subtasks: [],
             notes: [],
@@ -167,18 +178,25 @@ export function useDataLoading(
             due_date: taskData.due_date,
             completed_date: taskData.completed_date
           };
-        }) || [];
+        }).filter(Boolean) as Task[]; // Filter out any nulls and cast to Task[]
           
         // Format each subtask data
-        const completedSubtasks: SubTask[] = reportSubtasksData?.map(rs => {
-          // Fix: Access the subtasks property of each item in reportSubtasksData
+        const completedSubtasks: SubTask[] = reportSubtasksData.map(rs => {
+          // Each reportSubtasksData item contains a subtasks object with subtask data
           const subtaskData = rs.subtasks;
+          
+          // Check if subtaskData is valid before accessing its properties
+          if (!subtaskData) {
+            console.error('Missing subtask data in report subtasks');
+            return null;
+          }
+          
           return {
             id: subtaskData.id,
             title: subtaskData.title,
             status: subtaskData.status
           };
-        }) || [];
+        }).filter(Boolean) as SubTask[]; // Filter out any nulls and cast to SubTask[]
           
         return {
           id: report.id,

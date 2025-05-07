@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { User, Task, Project, SubTask, Report } from '@/types';
 import { users as initialUsers, tasks as initialTasks, projects as initialProjects } from '@/data/mockData';
@@ -138,7 +137,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       calculateTaskProgress,
       generateReport,
       getReports,
-      loadInitialData
+      loadInitialData,
+      dataLoaded
     }}>
       {children}
     </AppContext.Provider>

@@ -32,42 +32,55 @@ export function useTaskOperations(
         async (payload) => {
           console.log('Task change detected:', payload);
           
-          try {
-            // Instead of reloading everything, handle changes incrementally
-            if (payload.eventType === 'DELETE') {
-              // For deletes, just remove the task from state
-              const deletedId = payload.old.id;
-              setTasksList(prev => prev.filter(task => task.id !== deletedId));
+          if (payload.eventType === 'DELETE') {
+            try {
+              // For DELETE, update the state by filtering out the deleted task
+              const deletedTaskId = payload.old.id;
+              setTasksList(prev => prev.filter(task => task.id !== deletedTaskId));
               
               toast({
                 title: "Task removed",
-                description: "A task has been deleted."
+                description: "Task has been removed from the list."
               });
-            } 
-            else if (payload.eventType === 'INSERT') {
-              // For inserts, fetch the new task and add it
-              const taskDetails = await fetchTaskDetails(payload.new);
-              if (taskDetails) {
-                setTasksList(prev => {
-                  // Check if this task already exists in the list to prevent duplicates
-                  if (prev.some(task => task.id === taskDetails.id)) {
-                    return prev;
-                  }
-                  return [...prev, taskDetails];
+            } catch (error) {
+              console.error("Error processing task deletion:", error);
+            }
+          } else if (payload.eventType === 'INSERT') {
+            // For new tasks, fetch the task details and add to the list
+            try {
+              const newTask = payload.new;
+              const taskWithDetails = await fetchTaskDetails(newTask);
+              
+              if (taskWithDetails) {
+                setTasksList(prev => [...prev, taskWithDetails]);
+                
+                toast({
+                  title: "New task added",
+                  description: `Task "${taskWithDetails.title}" has been added.`
                 });
               }
-            } 
-            else if (payload.eventType === 'UPDATE') {
-              // For updates, update the existing task in-place
-              const taskDetails = await fetchTaskDetails(payload.new);
-              if (taskDetails) {
-                setTasksList(prev => 
-                  prev.map(task => task.id === taskDetails.id ? taskDetails : task)
-                );
-              }
+            } catch (error) {
+              console.error("Error processing new task:", error);
             }
-          } catch (error) {
-            console.error("Error processing realtime update:", error);
+          } else if (payload.eventType === 'UPDATE') {
+            // For updated tasks, update the specific task in the list
+            try {
+              const updatedTask = payload.new;
+              const taskWithDetails = await fetchTaskDetails(updatedTask);
+              
+              if (taskWithDetails) {
+                setTasksList(prev => 
+                  prev.map(task => task.id === taskWithDetails.id ? taskWithDetails : task)
+                );
+                
+                toast({
+                  title: "Task updated",
+                  description: "Task has been updated with latest changes."
+                });
+              }
+            } catch (error) {
+              console.error("Error processing updated task:", error);
+            }
           }
         }
       )
@@ -130,38 +143,36 @@ export function useTaskOperations(
 
   const addTask = async (task: Omit<Task, 'id' | 'assignedDate' | 'progress'>) => {
     try {
-      // Check if this is a multi-user task assignment
+      // Check if we're creating multiple tasks for different users
       const assignees = Array.isArray(task.assignedTo) ? task.assignedTo : [task.assignedTo];
       
-      // Create a separate task for each assignee
       for (const assignee of assignees) {
-        // Insert task in Supabase
+        // Insert task in Supabase for each assignee
         const { data: newTask, error } = await supabase
           .from('tasks')
           .insert({
             title: task.title,
             description: task.description,
             assigned_to: assignee,
-            project_id: task.projectId,
-            project_stage_id: task.project_stage_id,
+            project_id: task.projectId || task.project_id,
+            project_stage_id: task.projectStage || task.project_stage_id,
             status: task.status,
             priority: task.priority,
-            due_date: task.dueDate
+            due_date: task.dueDate || task.due_date,
+            progress: 0
           })
           .select()
           .single();
           
         if (error) throw error;
         
-        // Note: We don't need to add the task to state here
-        // The realtime subscription will handle this for us
+        // We don't need to manually update the state here
+        // The realtime subscription will handle adding the task to state
       }
       
       toast({
         title: "Task created",
-        description: assignees.length > 1 
-          ? `Task "${task.title}" has been assigned to ${assignees.length} users.`
-          : `Task "${task.title}" has been created.`
+        description: `Task "${task.title}" has been created.`
       });
     } catch (error: any) {
       console.error("Error creating task:", error);
@@ -186,36 +197,19 @@ export function useTaskOperations(
         completedDate = null; // Clear completed date when marking as undone
       }
       
+      // Fix the type issues by ensuring completedDate is a Date object or null when passing to updateTaskInSupabase
+      const completedDateForUpdate = completedDate instanceof Date 
+        ? completedDate 
+        : completedDate 
+          ? new Date(completedDate) 
+          : null;
+      
       // Update task in Supabase
-      await updateTaskInSupabase(updatedTask, progress, completedDate instanceof Date ? completedDate : completedDate ? new Date(completedDate) : null);
+      await updateTaskInSupabase(updatedTask, progress, completedDateForUpdate);
       
-      // Update the task in state
-      const updatedTaskWithBothProps: Task = {
-        ...updatedTask,
-        progress,
-        // Make sure we have both camelCase and snake_case properties for compatibility
-        assignedTo: updatedTask.assignedTo || updatedTask.assigned_to || '',
-        projectId: updatedTask.projectId || updatedTask.project_id || '',
-        completedDate: completedDate ? new Date(completedDate instanceof Date ? completedDate : completedDate) : undefined,
-        dueDate: updatedTask.dueDate || (updatedTask.due_date ? new Date(updatedTask.due_date) : undefined),
-        assignedDate: updatedTask.assignedDate || (updatedTask.assigned_date ? new Date(updatedTask.assigned_date) : new Date()),
-        // Keep the original properties
-        project_id: updatedTask.projectId || updatedTask.project_id,
-        assigned_to: updatedTask.assignedTo || updatedTask.assigned_to,
-        due_date: updatedTask.dueDate || updatedTask.due_date,
-        completed_date: completedDate,
-        assigned_date: updatedTask.assignedDate || updatedTask.assigned_date
-      };
+      // We don't need to manually update the state here
+      // The realtime subscription will handle updating the task in state
       
-      // The local update ensures immediate UI feedback while we wait for realtime updates
-      setTasksList(prev => 
-        prev.map(task => task.id === updatedTask.id ? updatedTaskWithBothProps : task)
-      );
-      
-      toast({
-        title: "Task updated",
-        description: `Task "${updatedTask.title}" has been updated.`
-      });
     } catch (error: any) {
       console.error("Error updating task:", error);
       toast({

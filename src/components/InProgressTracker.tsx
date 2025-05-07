@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { useState } from 'react';
 import TaskDetail from './TaskDetail';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog } from '@/components/ui/dialog';
 
 const InProgressTracker = () => {
   const { getTasksInProgress, getUserById, getProjectById } = useAppContext();
@@ -155,11 +155,14 @@ const InProgressTracker = () => {
       )}
 
       {/* Dialog for editing task */}
-      <Dialog open={!!editingTask} onOpenChange={(open) => !open && setEditingTask(null)}>
-        <DialogContent className="max-w-3xl p-0 overflow-hidden">
-          {editingTask && <TaskDetail task={editingTask} onClose={() => setEditingTask(null)} />}
-        </DialogContent>
-      </Dialog>
+      {editingTask && (
+        <TaskDetail 
+          task={editingTask} 
+          projectColor={getProjectById(editingTask.projectId || editingTask.project_id || '')?.color || '#cbd5e1'}
+          open={!!editingTask}
+          onOpenChange={(open) => !open && setEditingTask(null)}
+        />
+      )}
     </div>
   );
 };

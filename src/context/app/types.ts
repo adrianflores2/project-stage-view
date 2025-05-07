@@ -33,4 +33,5 @@ export interface AppContextProps {
   generateReport: (taskId: string, message: string) => Promise<void>;
   getReports: () => Report[];
   loadInitialData: () => Promise<void>;
+  dataLoaded: boolean; // Added this property to fix the error
 }

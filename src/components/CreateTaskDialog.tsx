@@ -43,7 +43,7 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
   const [description, setDescription] = useState('');
   const [projectId, setProjectId] = useState('');
   const [projectStageId, setProjectStageId] = useState('');
-  const [assignedTo, setAssignedTo] = useState<string | string[]>('');
+  const [assignedTo, setAssignedTo] = useState<string>(''); // Changed to just string type
   const [isMultipleAssignees, setIsMultipleAssignees] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
@@ -90,23 +90,41 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Handle multiple assignees
-    const finalAssignedTo = isMultipleAssignees ? selectedUsers : assignedTo;
-    
-    addTask({
-      title,
-      description,
-      projectId,
-      project_id: projectId,
-      project_stage_id: projectStageId,
-      projectStage: projectStages.find(stage => stage.id === projectStageId)?.name || '',
-      assignedTo: finalAssignedTo,
-      status: 'not-started',
-      subtasks: [],
-      notes: [],
-      dueDate,
-      priority
-    });
+    if (isMultipleAssignees) {
+      // For multiple assignees, create a task for each selected user
+      selectedUsers.forEach(userId => {
+        addTask({
+          title,
+          description,
+          projectId,
+          project_id: projectId,
+          project_stage_id: projectStageId,
+          projectStage: projectStages.find(stage => stage.id === projectStageId)?.name || '',
+          assignedTo: userId,
+          status: 'not-started',
+          subtasks: [],
+          notes: [],
+          dueDate,
+          priority
+        });
+      });
+    } else {
+      // For single assignee
+      addTask({
+        title,
+        description,
+        projectId,
+        project_id: projectId,
+        project_stage_id: projectStageId,
+        projectStage: projectStages.find(stage => stage.id === projectStageId)?.name || '',
+        assignedTo,
+        status: 'not-started',
+        subtasks: [],
+        notes: [],
+        dueDate,
+        priority
+      });
+    }
     
     // Reset form and close dialog
     setTitle('');

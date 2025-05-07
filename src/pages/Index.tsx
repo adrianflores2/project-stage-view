@@ -25,10 +25,16 @@ const Index = () => {
     
     // Make sure we enable the realtime feature in Supabase
     const setupRealtime = async () => {
-      // Enable realtime for the tasks table
-      await supabase.rpc('supabase_functions.enable_realtime', {
-        table_name: 'tasks',
-      });
+      // Enable realtime for multiple tables
+      const tables = ['tasks', 'subtasks', 'projects', 'project_stages', 'notes', 'reports'];
+      
+      for (const tableName of tables) {
+        await supabase.rpc('supabase_functions.enable_realtime', {
+          table_name: tableName,
+        });
+      }
+      
+      console.log('Realtime subscriptions enabled for all required tables');
     };
     
     setupRealtime();

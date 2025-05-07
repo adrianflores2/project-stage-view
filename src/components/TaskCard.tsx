@@ -28,10 +28,11 @@ interface TaskCardProps {
 }
 
 const TaskCard = ({ task, projectColor, viewMode }: TaskCardProps) => {
-  const { currentUser, getUserById } = useAppContext();
+  const { currentUser, getUserById, getProjectById } = useAppContext();
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   
   const assignedUser = getUserById(task.assignedTo);
+  const project = getProjectById(task.projectId);
   
   // Status colors
   const statusColors = {
@@ -306,15 +307,47 @@ const TaskCard = ({ task, projectColor, viewMode }: TaskCardProps) => {
           )}
         </div>
         
-        {/* Notes preview that shows on hover */}
-        {task.notes.length > 0 && (
-          <div className="p-0 hidden group-hover:block">
-            <div className="bg-gray-50 w-full p-3 text-xs text-gray-600">
+        {/* Notes and additional details on hover */}
+        <div className="p-0 hidden group-hover:block">
+          {/* Show notes if available */}
+          {task.notes.length > 0 && (
+            <div className="bg-gray-50 w-full p-3 text-xs text-gray-600 border-t">
               <div className="font-medium mb-1">Latest note:</div>
               <p className="line-clamp-2">{task.notes[task.notes.length - 1].content}</p>
             </div>
-          </div>
-        )}
+          )}
+          
+          {/* Additional details for completed tasks on hover */}
+          {task.status === 'completed' && (
+            <div className="bg-gray-50 w-full p-3 text-xs text-gray-600 border-t">
+              <div className="space-y-2">
+                <div>
+                  <div className="font-medium">Assignee:</div>
+                  <p>{assignedUser?.name || 'Unassigned'}</p>
+                </div>
+                <div>
+                  <div className="font-medium">Project Stage:</div>
+                  <p>{task.projectStage || 'Not specified'}</p>
+                </div>
+                {task.subtasks.length > 0 && (
+                  <div>
+                    <div className="font-medium">Subtasks:</div>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {task.subtasks.map(subtask => (
+                        <span 
+                          key={subtask.id}
+                          className={`text-xs px-1.5 py-0.5 rounded-sm ${getSubtaskStatusStyle(subtask.status)}`}
+                        >
+                          {subtask.title}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </Card>
       
       {showDetailDialog && (

@@ -15,7 +15,47 @@ export function useReportOperations(
     if (!currentUser) return;
     
     try {
-      // Create report in Supabase
+      // Check if the user already has a report for today
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Set to beginning of day for proper comparison
+      
+      const existingTodayReports = reports.filter(r => {
+        const reportDate = new Date(r.date);
+        reportDate.setHours(0, 0, 0, 0);
+        return r.userId === currentUser.id && reportDate.getTime() === today.getTime();
+      });
+
+      // Delete existing reports for today from the same user
+      if (existingTodayReports.length > 0) {
+        for (const existingReport of existingTodayReports) {
+          // Delete report_tasks links
+          await supabase
+            .from('report_tasks')
+            .delete()
+            .eq('report_id', existingReport.id);
+          
+          // Delete report_subtasks links
+          await supabase
+            .from('report_subtasks')
+            .delete()
+            .eq('report_id', existingReport.id);
+          
+          // Delete the report itself
+          await supabase
+            .from('reports')
+            .delete()
+            .eq('id', existingReport.id);
+        }
+        
+        // Update local state to remove the deleted reports
+        setReportsList(prev => prev.filter(r => {
+          const reportDate = new Date(r.date);
+          reportDate.setHours(0, 0, 0, 0);
+          return !(r.userId === currentUser.id && reportDate.getTime() === today.getTime());
+        }));
+      }
+      
+      // Create new report in Supabase
       const { data: newReport, error } = await supabase
         .from('reports')
         .insert({
@@ -29,7 +69,6 @@ export function useReportOperations(
       if (error) throw error;
       
       // Get all completed tasks and subtasks for the current user from today
-      const today = new Date();
       const todaysCompletedTasks = tasks.filter(t => 
         (t.assignedTo || t.assigned_to) === currentUser.id &&
         t.status === 'completed' &&
@@ -98,12 +137,12 @@ export function useReportOperations(
   };
   
   const getReports = () => {
-    if (currentUser?.role === 'worker') {
-      // Workers can only see their own reports
-      return reports.filter(report => report.userId === currentUser.id);
+    // Allow coordinators and supervisors to see all reports
+    if (currentUser?.role === 'coordinator' || currentUser?.role === 'supervisor') {
+      return reports;
     }
-    // Coordinators and Supervisors can see all reports
-    return reports;
+    // Workers can only see their own reports
+    return reports.filter(report => report.userId === currentUser.id);
   };
 
   return { generateReport, getReports };

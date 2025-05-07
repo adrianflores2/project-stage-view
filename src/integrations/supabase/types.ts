@@ -339,7 +339,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      task_priority: "Alta" | "Media" | "Baja" | "Muy Alta"
+      task_priority: "Alta" | "Media" | "Baja"
       task_status: "not-started" | "in-progress" | "paused" | "completed"
       user_role: "worker" | "coordinator" | "supervisor"
     }
@@ -457,7 +457,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      task_priority: ["Alta", "Media", "Baja", "Muy Alta"],
+      task_priority: ["Alta", "Media", "Baja"],
       task_status: ["not-started", "in-progress", "paused", "completed"],
       user_role: ["worker", "coordinator", "supervisor"],
     },

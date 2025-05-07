@@ -146,10 +146,12 @@ export function useDataLoading(
       setReportsList(reports);
       setDataLoaded(true);
       
+      // Fix: Remove the second argument (options object) from the toast call
       toast({
         title: "Data loaded successfully",
         description: `Loaded ${users.length} users, ${projects.length} projects, and ${tasks.length} tasks`,
-      }, { id: "data-loaded" }); // Add unique ID to prevent duplicate toasts
+        id: "data-loaded" // Keep the ID as part of the first argument object
+      });
       
     } catch (error) {
       console.error("Error loading data:", error);

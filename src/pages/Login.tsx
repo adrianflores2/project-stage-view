@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from "@/integrations/supabase/client";
 import { useAppContext } from '@/context/AppContext';
@@ -20,8 +20,15 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { setCurrentUser, users } = useAppContext();
+  const { setCurrentUser, users, isAuthenticated } = useAppContext();
   const navigate = useNavigate();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/');
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,6 +110,7 @@ const Login = () => {
           description: "Welcome back!"
         });
         
+        // Navigate after everything is done
         navigate('/');
       }
     } catch (error: any) {

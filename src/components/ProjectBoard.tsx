@@ -20,12 +20,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { User, Filter, Plus, Kanban, Check, Trash } from 'lucide-react';
+import { User, Filter, Plus, Kanban, Check, Trash, XCircle } from 'lucide-react';
 import CreateTaskDialog from './CreateTaskDialog';
 import { Task } from '@/types';
 
 const ProjectBoard = () => {
-  const { currentUser, projects, users, getFilteredTasks, deleteProject } = useAppContext();
+  const { currentUser, projects, users, getFilteredTasks, deleteProject, updateTask } = useAppContext();
   const [selectedUserId, setSelectedUserId] = useState<string | undefined>(undefined);
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -66,6 +66,16 @@ const ProjectBoard = () => {
   const handleDeleteProject = async (projectId: string) => {
     await deleteProject(projectId);
     setProjectToDelete(null);
+  };
+  
+  const handleMarkTaskUndone = async (task: Task) => {
+    const updatedTask = { 
+      ...task, 
+      status: 'in-progress', 
+      completedDate: undefined, 
+      completed_date: undefined
+    };
+    await updateTask(updatedTask);
   };
   
   const canDeleteProject = currentUser?.role === 'coordinator';
@@ -198,6 +208,15 @@ const ProjectBoard = () => {
                               : 'Unknown date'}
                           </p>
                         </div>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="ml-2 text-gray-500 hover:text-red-500"
+                          onClick={() => handleMarkTaskUndone(task)}
+                          title="Mark as undone"
+                        >
+                          <XCircle size={16} />
+                        </Button>
                       </div>
                     ))}
                   </div>

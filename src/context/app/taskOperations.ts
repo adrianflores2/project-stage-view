@@ -1,6 +1,7 @@
 import { Task, SubTask } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
+import { useEffect } from 'react';
 
 export function useTaskOperations(
   tasks: Task[],
@@ -9,6 +10,108 @@ export function useTaskOperations(
   currentUser: any
 ) {
   const { toast } = useToast();
+  
+  // Set up realtime subscription for task updates
+  useEffect(() => {
+    if (!currentUser) return;
+    
+    const channel = supabase
+      .channel('tasks-changes')
+      .on('postgres_changes', 
+        {
+          event: '*', 
+          schema: 'public', 
+          table: 'tasks'
+        }, 
+        async (payload) => {
+          // Reload all tasks data to ensure we have the latest
+          const { data: tasksData, error: tasksError } = await supabase
+            .from('tasks')
+            .select('*');
+            
+          if (tasksError) {
+            console.error("Error reloading tasks:", tasksError);
+            return;
+          }
+          
+          // Process tasks with their subtasks and notes
+          const tasksWithDetails = await Promise.all(tasksData.map(async (task) => {
+            // Get subtasks
+            const { data: subtasksData } = await supabase
+              .from('subtasks')
+              .select('*')
+              .eq('task_id', task.id);
+              
+            // Get notes
+            const { data: notesData } = await supabase
+              .from('notes')
+              .select('*, users!notes_author_id_fkey(name)')
+              .eq('task_id', task.id);
+              
+            // Format notes with author name
+            const formattedNotes = notesData?.map(note => ({
+              id: note.id,
+              content: note.content,
+              author: note.users?.name || 'Unknown',
+              createdAt: note.created_at
+            })) || [];
+            
+            // Get project stage name
+            let projectStage = "";
+            if (task.project_stage_id) {
+              const { data: stageData } = await supabase
+                .from('project_stages')
+                .select('name')
+                .eq('id', task.project_stage_id)
+                .single();
+                
+              if (stageData) {
+                projectStage = stageData.name;
+              }
+            }
+            
+            const taskWithDetails: Task = {
+              id: task.id,
+              title: task.title,
+              description: task.description || '',
+              assignedTo: task.assigned_to || '',
+              projectId: task.project_id || '',
+              projectStage: projectStage,
+              status: task.status,
+              subtasks: subtasksData || [],
+              notes: formattedNotes || [],
+              assignedDate: task.assigned_date ? new Date(task.assigned_date) : new Date(),
+              dueDate: task.due_date ? new Date(task.due_date) : undefined,
+              completedDate: task.completed_date ? new Date(task.completed_date) : undefined,
+              progress: task.progress || 0,
+              priority: task.priority || 'Media',
+              // Keep the original properties for compatibility with Supabase
+              project_id: task.project_id,
+              project_stage_id: task.project_stage_id,
+              assigned_to: task.assigned_to,
+              assigned_date: task.assigned_date,
+              due_date: task.due_date,
+              completed_date: task.completed_date
+            };
+            
+            return taskWithDetails;
+          }));
+          
+          setTasksList(tasksWithDetails);
+          
+          toast({
+            title: "Tasks updated",
+            description: "Task list has been refreshed with latest changes."
+          });
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on unmount
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUser, setTasksList, toast]);
   
   const getFilteredTasks = (projectId?: string, assignedTo?: string) => {
     let filtered = [...tasks];
@@ -19,20 +122,35 @@ export function useTaskOperations(
     
     if (assignedTo) {
       filtered = filtered.filter(task => (task.assignedTo || task.assigned_to) === assignedTo);
+    } else if (currentUser && currentUser.role === 'worker') {
+      // Workers should only see tasks assigned to them
+      filtered = filtered.filter(task => (task.assignedTo || task.assigned_to) === currentUser.id);
     }
     
     return filtered;
   };
 
   const getTasksInProgress = () => {
-    return tasks.filter(task => 
+    // Apply worker filtering if needed
+    let filteredTasks = tasks;
+    if (currentUser && currentUser.role === 'worker') {
+      filteredTasks = tasks.filter(task => (task.assignedTo || task.assigned_to) === currentUser.id);
+    }
+    
+    return filteredTasks.filter(task => 
       task.status === 'in-progress' || 
       task.subtasks.some(subtask => subtask.status === 'in-progress')
     );
   };
   
   const getCompletedTasksByDate = (date: Date) => {
-    return tasks.filter(task => 
+    // Apply worker filtering if needed
+    let filteredTasks = tasks;
+    if (currentUser && currentUser.role === 'worker') {
+      filteredTasks = tasks.filter(task => (task.assignedTo || task.assigned_to) === currentUser.id);
+    }
+    
+    return filteredTasks.filter(task => 
       task.status === 'completed' && 
       (task.completedDate || task.completed_date) && 
       new Date(task.completedDate || task.completed_date!).toDateString() === date.toDateString()
@@ -105,6 +223,14 @@ export function useTaskOperations(
       // Calculate the progress
       const progress = calculateTaskProgress(updatedTask);
       
+      // Determine completed date based on status
+      let completedDate = updatedTask.completedDate || updatedTask.completed_date;
+      if (updatedTask.status === 'completed' && !completedDate) {
+        completedDate = new Date();
+      } else if (updatedTask.status !== 'completed') {
+        completedDate = null; // Clear completed date when marking as undone
+      }
+      
       // Update task in Supabase
       const { error } = await supabase
         .from('tasks')
@@ -116,7 +242,7 @@ export function useTaskOperations(
           project_stage_id: updatedTask.project_stage_id,
           priority: updatedTask.priority,
           due_date: updatedTask.dueDate || updatedTask.due_date,
-          completed_date: updatedTask.status === 'completed' ? new Date() : (updatedTask.completedDate || updatedTask.completed_date)
+          completed_date: completedDate
         })
         .eq('id', updatedTask.id);
         
@@ -129,14 +255,14 @@ export function useTaskOperations(
         // Make sure we have both camelCase and snake_case properties for compatibility
         assignedTo: updatedTask.assignedTo || updatedTask.assigned_to || '',
         projectId: updatedTask.projectId || updatedTask.project_id || '',
-        completedDate: updatedTask.completedDate || (updatedTask.completed_date ? new Date(updatedTask.completed_date) : undefined),
+        completedDate: completedDate ? new Date(completedDate) : undefined,
         dueDate: updatedTask.dueDate || (updatedTask.due_date ? new Date(updatedTask.due_date) : undefined),
         assignedDate: updatedTask.assignedDate || (updatedTask.assigned_date ? new Date(updatedTask.assigned_date) : new Date()),
         // Keep the original properties
         project_id: updatedTask.projectId || updatedTask.project_id,
         assigned_to: updatedTask.assignedTo || updatedTask.assigned_to,
         due_date: updatedTask.dueDate || updatedTask.due_date,
-        completed_date: updatedTask.completedDate || updatedTask.completed_date,
+        completed_date: completedDate,
         assigned_date: updatedTask.assignedDate || updatedTask.assigned_date
       };
       
@@ -148,24 +274,6 @@ export function useTaskOperations(
         title: "Task updated",
         description: `Task "${updatedTask.title}" has been updated.`
       });
-      
-      // If status changed to completed or not-completed, handle subtasks
-      if (updatedTask.status !== 'completed') {
-        // Delete all subtasks if status is changed
-        await supabase
-          .from('subtasks')
-          .delete()
-          .eq('task_id', updatedTask.id);
-          
-        setTasksList(prev => 
-          prev.map(task => {
-            if (task.id === updatedTask.id) {
-              return {...task, subtasks: []};
-            }
-            return task;
-          })
-        );
-      }
     } catch (error: any) {
       console.error("Error updating task:", error);
       toast({

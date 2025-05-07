@@ -15,95 +15,125 @@ export function useDataLoading(
   
   const loadInitialData = async () => {
     try {
-      // Load users
-      const { data: usersData, error: usersError } = await supabase
-        .from('users')
-        .select('*');
-        
-      if (usersError) throw usersError;
-      setUsersList(usersData);
+      // Load in parallel using Promise.all to improve performance
+      const [
+        usersResponse,
+        projectsResponse,
+        tasksResponse,
+        reportsResponse
+      ] = await Promise.all([
+        supabase.from('users').select('*'),
+        supabase.from('projects').select('*'),
+        supabase.from('tasks').select('*'),
+        supabase.from('reports').select('*, users!reports_user_id_fkey(name)')
+      ]);
       
-      // Load projects
-      const { data: projectsData, error: projectsError } = await supabase
-        .from('projects')
-        .select('*');
-        
-      if (projectsError) throw projectsError;
+      // Check for errors
+      if (usersResponse.error) throw usersResponse.error;
+      if (projectsResponse.error) throw projectsResponse.error;
+      if (tasksResponse.error) throw tasksResponse.error;
+      if (reportsResponse.error) throw reportsResponse.error;
       
-      // Load project stages for each project
-      const projectsWithStages = await Promise.all(projectsData.map(async (project) => {
-        const { data: stagesData, error: stagesError } = await supabase
-          .from('project_stages')
-          .select('*')
-          .eq('project_id', project.id)
-          .order('display_order', { ascending: true });
-          
-        if (stagesError) throw stagesError;
+      // Set users data
+      setUsersList(usersResponse.data);
+      
+      // Process projects with their stages
+      const projectsData = projectsResponse.data;
+      const projectIds = projectsData.map(project => project.id);
+      
+      // Get all stages for all projects at once
+      const { data: allStagesData, error: stagesError } = await supabase
+        .from('project_stages')
+        .select('*')
+        .in('project_id', projectIds)
+        .order('display_order', { ascending: true });
         
-        return {
-          ...project,
-          stages: stagesData.map(stage => stage.name)
-        };
+      if (stagesError) throw stagesError;
+      
+      // Group stages by project_id
+      const stagesByProject: Record<string, any[]> = {};
+      allStagesData.forEach(stage => {
+        if (!stagesByProject[stage.project_id]) {
+          stagesByProject[stage.project_id] = [];
+        }
+        stagesByProject[stage.project_id].push(stage);
+      });
+      
+      // Combine projects with their stages
+      const projectsWithStages = projectsData.map(project => ({
+        ...project,
+        stages: (stagesByProject[project.id] || []).map(stage => stage.name)
       }));
       
       setProjectsList(projectsWithStages);
       
-      // Load tasks with their subtasks and notes
-      const { data: tasksData, error: tasksError } = await supabase
-        .from('tasks')
+      // Process tasks
+      const tasksData = tasksResponse.data;
+      const taskIds = tasksData.map(task => task.id);
+      
+      // Get all subtasks for all tasks at once
+      const { data: allSubtasksData, error: subtasksError } = await supabase
+        .from('subtasks')
+        .select('*')
+        .in('task_id', taskIds);
+        
+      if (subtasksError) throw subtasksError;
+      
+      // Get all notes for all tasks at once
+      const { data: allNotesData, error: notesError } = await supabase
+        .from('notes')
+        .select('*, users!notes_author_id_fkey(name)')
+        .in('task_id', taskIds);
+        
+      if (notesError) throw notesError;
+      
+      // Get all project stages
+      const { data: allProjectStages, error: projectStagesError } = await supabase
+        .from('project_stages')
         .select('*');
         
-      if (tasksError) throw tasksError;
+      if (projectStagesError) throw projectStagesError;
       
-      const tasksWithDetails = await Promise.all(tasksData.map(async (task) => {
-        // Get subtasks
-        const { data: subtasksData, error: subtasksError } = await supabase
-          .from('subtasks')
-          .select('*')
-          .eq('task_id', task.id);
-          
-        if (subtasksError) throw subtasksError;
-        
-        // Get notes
-        const { data: notesData, error: notesError } = await supabase
-          .from('notes')
-          .select('*, users!notes_author_id_fkey(name)')
-          .eq('task_id', task.id);
-          
-        if (notesError) throw notesError;
-        
-        // Format notes with author name
-        const formattedNotes = notesData.map(note => ({
+      // Group subtasks and notes by task_id
+      const subtasksByTask: Record<string, any[]> = {};
+      const notesByTask: Record<string, any[]> = {};
+      const stagesById: Record<string, string> = {};
+      
+      allSubtasksData.forEach(subtask => {
+        if (!subtasksByTask[subtask.task_id]) {
+          subtasksByTask[subtask.task_id] = [];
+        }
+        subtasksByTask[subtask.task_id].push(subtask);
+      });
+      
+      allNotesData.forEach(note => {
+        if (!notesByTask[note.task_id]) {
+          notesByTask[note.task_id] = [];
+        }
+        notesByTask[note.task_id].push({
           id: note.id,
           content: note.content,
           author: note.users?.name || 'Unknown',
           createdAt: note.created_at
-        }));
-        
-        // Get project stage name
-        let projectStage = "";
-        if (task.project_stage_id) {
-          const { data: stageData } = await supabase
-            .from('project_stages')
-            .select('name')
-            .eq('id', task.project_stage_id)
-            .single();
-            
-          if (stageData) {
-            projectStage = stageData.name;
-          }
-        }
-        
+        });
+      });
+      
+      allProjectStages.forEach(stage => {
+        stagesById[stage.id] = stage.name;
+      });
+      
+      // Combine tasks with their subtasks and notes
+      const tasksWithDetails = tasksData.map(task => {
         const taskWithDetails: Task = {
           id: task.id,
           title: task.title,
           description: task.description || '',
           assignedTo: task.assigned_to || '',
           projectId: task.project_id || '',
-          projectStage: projectStage,
+          projectStage: task.project_stage_id ? stagesById[task.project_stage_id] || '' : '',
           status: task.status,
-          subtasks: subtasksData || [],
-          notes: formattedNotes || [],
+          subtasks: subtasksByTask[task.id] || [],
+          notes: notesByTask[task.id] || [],
           assignedDate: task.assigned_date ? new Date(task.assigned_date) : new Date(),
           dueDate: task.due_date ? new Date(task.due_date) : undefined,
           completedDate: task.completed_date ? new Date(task.completed_date) : undefined,
@@ -119,97 +149,95 @@ export function useDataLoading(
         };
         
         return taskWithDetails;
-      }));
+      });
       
       setTasksList(tasksWithDetails);
       
-      // Load reports
-      const { data: reportsData, error: reportsError } = await supabase
-        .from('reports')
-        .select('*, users!reports_user_id_fkey(name)');
-        
-      if (reportsError) throw reportsError;
+      // Process reports
+      const reportsData = reportsResponse.data;
+      const reportIds = reportsData.map(report => report.id);
       
-      const reportsWithDetails: Report[] = await Promise.all(reportsData.map(async (report) => {
-        // Get report tasks
-        const { data: reportTasksData, error: reportTasksError } = await supabase
+      if (reportIds.length > 0) {
+        // Get all report tasks for all reports at once
+        const { data: allReportTasksData, error: reportTasksError } = await supabase
           .from('report_tasks')
           .select('*, tasks(*)')
-          .eq('report_id', report.id);
+          .in('report_id', reportIds);
           
         if (reportTasksError) throw reportTasksError;
         
-        // Get report subtasks
-        const { data: reportSubtasksData, error: reportSubtasksError } = await supabase
+        // Get all report subtasks for all reports at once
+        const { data: allReportSubtasksData, error: reportSubtasksError } = await supabase
           .from('report_subtasks')
           .select('*, subtasks(*)')
-          .eq('report_id', report.id);
+          .in('report_id', reportIds);
           
         if (reportSubtasksError) throw reportSubtasksError;
         
-        // Format each task data
-        const completedTasks: Task[] = reportTasksData.map(rt => {
-          // Each reportTasksData item contains a tasks object with task data
-          const taskData = rt.tasks;
-          
-          // Check if taskData is valid before accessing its properties
-          if (!taskData) {
-            console.error('Missing task data in report tasks');
-            return null;
+        // Group report tasks and subtasks by report_id
+        const tasksByReport: Record<string, any[]> = {};
+        const subtasksByReport: Record<string, any[]> = {};
+        
+        allReportTasksData.forEach(reportTask => {
+          if (!tasksByReport[reportTask.report_id]) {
+            tasksByReport[reportTask.report_id] = [];
           }
           
-          return {
-            id: taskData.id,
-            title: taskData.title,
-            description: taskData.description || '',
-            assignedTo: taskData.assigned_to || '',
-            projectId: taskData.project_id || '',
-            projectStage: '',  // We don't have this data here
-            status: taskData.status,
-            subtasks: [],
-            notes: [],
-            assignedDate: taskData.assigned_date ? new Date(taskData.assigned_date) : new Date(),
-            progress: taskData.progress || 0,
-            completedDate: taskData.completed_date ? new Date(taskData.completed_date) : undefined,
-            // Keep original properties
-            project_id: taskData.project_id,
-            assigned_to: taskData.assigned_to,
-            assigned_date: taskData.assigned_date,
-            due_date: taskData.due_date,
-            completed_date: taskData.completed_date
-          };
-        }).filter(Boolean) as Task[]; // Filter out any nulls and cast to Task[]
-          
-        // Format each subtask data
-        const completedSubtasks: SubTask[] = reportSubtasksData.map(rs => {
-          // Each reportSubtasksData item contains a subtasks object with subtask data
-          const subtaskData = rs.subtasks;
-          
-          // Check if subtaskData is valid before accessing its properties
-          if (!subtaskData) {
-            console.error('Missing subtask data in report subtasks');
-            return null;
+          if (reportTask.tasks) {
+            const taskData = reportTask.tasks;
+            tasksByReport[reportTask.report_id].push({
+              id: taskData.id,
+              title: taskData.title,
+              description: taskData.description || '',
+              assignedTo: taskData.assigned_to || '',
+              projectId: taskData.project_id || '',
+              projectStage: '',
+              status: taskData.status,
+              subtasks: [],
+              notes: [],
+              assignedDate: taskData.assigned_date ? new Date(taskData.assigned_date) : new Date(),
+              progress: taskData.progress || 0,
+              completedDate: taskData.completed_date ? new Date(taskData.completed_date) : undefined,
+              project_id: taskData.project_id,
+              assigned_to: taskData.assigned_to,
+              assigned_date: taskData.assigned_date,
+              due_date: taskData.due_date,
+              completed_date: taskData.completed_date
+            });
+          }
+        });
+        
+        allReportSubtasksData.forEach(reportSubtask => {
+          if (!subtasksByReport[reportSubtask.report_id]) {
+            subtasksByReport[reportSubtask.report_id] = [];
           }
           
-          return {
-            id: subtaskData.id,
-            title: subtaskData.title,
-            status: subtaskData.status
-          };
-        }).filter(Boolean) as SubTask[]; // Filter out any nulls and cast to SubTask[]
-          
-        return {
+          if (reportSubtask.subtasks) {
+            const subtaskData = reportSubtask.subtasks;
+            subtasksByReport[reportSubtask.report_id].push({
+              id: subtaskData.id,
+              title: subtaskData.title,
+              status: subtaskData.status
+            });
+          }
+        });
+        
+        // Combine reports with their tasks and subtasks
+        const reportsWithDetails: Report[] = reportsData.map(report => ({
           id: report.id,
           userId: report.user_id,
           userName: report.users?.name || 'Unknown',
           date: new Date(report.date),
           message: report.message || '',
-          completedTasks,
-          completedSubtasks
-        };
-      }));
+          completedTasks: tasksByReport[report.id] || [],
+          completedSubtasks: subtasksByReport[report.id] || []
+        }));
+        
+        setReportsList(reportsWithDetails);
+      } else {
+        setReportsList([]);
+      }
       
-      setReportsList(reportsWithDetails);
       setDataLoaded(true);
       
     } catch (error) {
@@ -225,6 +253,7 @@ export function useDataLoading(
       setTasksList(initialTasks);
       setProjectsList(initialProjects);
       setReportsList([]);
+      setDataLoaded(true);
     }
   };
 

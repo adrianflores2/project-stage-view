@@ -75,15 +75,15 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
   const [reassignDialogOpen, setReassignDialogOpen] = useState(false);
   const [newAssigneeId, setNewAssigneeId] = useState('');
   
-  const assignedUser = getUserById(task.assigned_to);
-  const project = getProjectById(task.project_id);
+  const assignedUser = getUserById(task.assignedTo || task.assigned_to || '');
+  const project = getProjectById(task.projectId || task.project_id || '');
   
   // Worker can now update task status and add subtasks
   const canAddNote = currentUser?.role !== 'worker';
   const canAddSubtask = currentUser?.role === 'worker' || currentUser?.role === 'coordinator';
   const canEditTask = currentUser?.role === 'coordinator';
   const canUpdateStatus = currentUser?.role === 'worker' || currentUser?.role === 'coordinator';
-  const isAssignedToCurrentUser = currentUser?.id === task.assigned_to;
+  const isAssignedToCurrentUser = currentUser?.id === (task.assignedTo || task.assigned_to);
   const canDeleteTask = currentUser?.role === 'coordinator';
   const canReassignTask = currentUser?.role === 'coordinator';
   
@@ -124,6 +124,7 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
     setEditingTask(prev => ({
       ...prev,
       status: status as Task['status'],
+      completedDate: status === 'completed' ? new Date() : undefined,
       completed_date: status === 'completed' ? new Date() : undefined
     }));
   };
@@ -157,16 +158,17 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
   
   // Calculate days remaining until due date
   const getDaysRemaining = () => {
-    if (!task.due_date) return null;
+    const dueDate = task.dueDate || task.due_date;
+    if (!dueDate) return null;
     const today = new Date();
-    const dueDate = new Date(task.due_date);
-    return differenceInDays(dueDate, today);
+    const due = new Date(dueDate);
+    return differenceInDays(due, today);
   };
   
   const daysRemaining = getDaysRemaining();
   
   // Get worker users for reassignment
-  const workerUsers = users.filter(u => u.role === 'worker' && u.id !== task.assigned_to);
+  const workerUsers = users.filter(u => u.role === 'worker' && u.id !== (task.assignedTo || task.assigned_to));
   
   return (
     <>
@@ -253,11 +255,11 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
                 </div>
               </div>
               
-              {task.due_date && (
+              {(task.dueDate || task.due_date) && (
                 <div className="rounded-md border p-3">
                   <div className="flex justify-between items-center mb-1">
                     <label className="text-sm text-gray-500 flex items-center">
-                      <Clock size={14} className="mr-1" /> Due Date: {format(new Date(task.due_date), 'MMM d, yyyy')}
+                      <Clock size={14} className="mr-1" /> Due Date: {format(new Date(task.dueDate || task.due_date!), 'MMM d, yyyy')}
                     </label>
                     <div className="text-sm font-medium">
                       {daysRemaining !== null ? (
@@ -290,17 +292,17 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
                     <Calendar size={14} className="mr-1" /> Assigned Date
                   </label>
                   <div className="text-sm mt-1">
-                    {format(new Date(task.assigned_date), 'MMM d, yyyy')}
+                    {format(new Date(task.assignedDate || task.assigned_date || new Date()), 'MMM d, yyyy')}
                   </div>
                 </div>
                 
-                {task.completed_date && (
+                {(task.completedDate || task.completed_date) && (
                   <div>
                     <label className="text-sm text-gray-500 flex items-center">
                       <CheckCircle2 size={14} className="mr-1" /> Completed Date
                     </label>
                     <div className="text-sm mt-1">
-                      {format(new Date(task.completed_date), 'MMM d, yyyy')}
+                      {format(new Date(task.completedDate || task.completed_date), 'MMM d, yyyy')}
                     </div>
                   </div>
                 )}
@@ -464,7 +466,7 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
                           <label className="text-sm font-medium">Project Stage</label>
                           <Select 
                             value={editingTask.projectStage} 
-                            onValueChange={(value) => setEditingTask(prev => ({ ...prev, projectStage: value }))}
+                            onValueChange={(value) => setEditingTask(prev => ({ ...prev, projectStage: value, project_stage_id: value }))}
                           >
                             <SelectTrigger>
                               <SelectValue />

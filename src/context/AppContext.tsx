@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { User, Task, Project, SubTask, Note, Report } from '@/types';
 import { users as initialUsers, tasks as initialTasks, projects as initialProjects } from '@/data/mockData';
@@ -160,12 +159,31 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           }
         }
         
-        return {
-          ...task,
-          projectStage,
-          subtasks: subtasksData,
-          notes: formattedNotes
+        const taskWithDetails: Task = {
+          id: task.id,
+          title: task.title,
+          description: task.description || '',
+          assignedTo: task.assigned_to || '',
+          projectId: task.project_id || '',
+          projectStage: projectStage,
+          status: task.status,
+          subtasks: subtasksData || [],
+          notes: formattedNotes || [],
+          assignedDate: task.assigned_date ? new Date(task.assigned_date) : new Date(),
+          dueDate: task.due_date ? new Date(task.due_date) : undefined,
+          completedDate: task.completed_date ? new Date(task.completed_date) : undefined,
+          progress: task.progress || 0,
+          priority: task.priority || 'Media',
+          // Keep the original properties for compatibility with Supabase
+          project_id: task.project_id,
+          project_stage_id: task.project_stage_id,
+          assigned_to: task.assigned_to,
+          assigned_date: task.assigned_date,
+          due_date: task.due_date,
+          completed_date: task.completed_date
         };
+        
+        return taskWithDetails;
       }));
       
       setTasksList(tasksWithDetails);
@@ -177,7 +195,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         
       if (reportsError) throw reportsError;
       
-      const reportsWithDetails = await Promise.all(reportsData.map(async (report) => {
+      const reportsWithDetails: Report[] = await Promise.all(reportsData.map(async (report) => {
         // Get report tasks
         const { data: reportTasksData } = await supabase
           .from('report_tasks')
@@ -190,14 +208,46 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           .select('subtasks(*)')
           .eq('report_id', report.id);
           
+        // Format each task data
+        const completedTasks: Task[] = reportTasksData?.map(rt => {
+          const taskData = rt.tasks;
+          return {
+            id: taskData.id,
+            title: taskData.title,
+            description: taskData.description || '',
+            assignedTo: taskData.assigned_to || '',
+            projectId: taskData.project_id || '',
+            projectStage: '',
+            status: taskData.status,
+            subtasks: [],
+            notes: [],
+            assignedDate: taskData.assigned_date ? new Date(taskData.assigned_date) : new Date(),
+            progress: taskData.progress || 0,
+            completedDate: taskData.completed_date ? new Date(taskData.completed_date) : undefined,
+            // Keep original properties
+            project_id: taskData.project_id,
+            assigned_to: taskData.assigned_to
+          };
+        }) || [];
+          
+        // Format each subtask data
+        const completedSubtasks: SubTask[] = reportSubtasksData?.map(rs => {
+          const subtaskData = rs.subtasks;
+          return {
+            id: subtaskData.id,
+            title: subtaskData.title,
+            status: subtaskData.status
+          };
+        }) || [];
+          
         return {
           id: report.id,
           userId: report.user_id,
           userName: report.users?.name || 'Unknown',
-          date: report.date,
-          message: report.message,
-          completedTasks: reportTasksData?.map(rt => rt.tasks) || [],
-          completedSubtasks: reportSubtasksData?.map(rs => rs.subtasks) || []
+          date: new Date(report.date),
+          message: report.message || '',
+          completedTasks,
+          completedSubtasks
         };
       }));
       
@@ -284,11 +334,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     let filtered = [...tasksList];
     
     if (projectId) {
-      filtered = filtered.filter(task => task.project_id === projectId);
+      filtered = filtered.filter(task => (task.projectId || task.project_id) === projectId);
     }
     
     if (assignedTo) {
-      filtered = filtered.filter(task => task.assigned_to === assignedTo);
+      filtered = filtered.filter(task => (task.assignedTo || task.assigned_to) === assignedTo);
     }
     
     return filtered;
@@ -304,8 +354,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const getCompletedTasksByDate = (date: Date) => {
     return tasksList.filter(task => 
       task.status === 'completed' && 
-      task.completed_date && 
-      new Date(task.completed_date).toDateString() === date.toDateString()
+      (task.completedDate || task.completed_date) && 
+      new Date(task.completedDate || task.completed_date!).toDateString() === date.toDateString()
     );
   };
 
@@ -328,7 +378,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           description: task.description,
           assigned_to: task.assignedTo,
           project_id: task.projectId,
-          project_stage_id: task.projectStageId,
+          project_stage_id: task.project_stage_id,
           status: task.status,
           priority: task.priority,
           due_date: task.dueDate
@@ -339,12 +389,28 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       if (error) throw error;
       
       // Add newly created task to state with empty subtasks and notes
-      const taskWithDetails = {
-        ...newTask,
+      const taskWithDetails: Task = {
+        id: newTask.id,
+        title: newTask.title,
+        description: newTask.description || '',
+        assignedTo: newTask.assigned_to || '',
+        projectId: newTask.project_id || '',
         projectStage: task.projectStage,
+        status: newTask.status,
         subtasks: [],
         notes: [],
-        progress: 0
+        assignedDate: newTask.assigned_date ? new Date(newTask.assigned_date) : new Date(),
+        dueDate: newTask.due_date ? new Date(newTask.due_date) : undefined,
+        completedDate: newTask.completed_date ? new Date(newTask.completed_date) : undefined,
+        progress: 0,
+        priority: newTask.priority || 'Media',
+        // Keep original properties
+        project_id: newTask.project_id,
+        project_stage_id: newTask.project_stage_id,
+        assigned_to: newTask.assigned_to,
+        assigned_date: newTask.assigned_date,
+        due_date: newTask.due_date,
+        completed_date: newTask.completed_date
       };
       
       setTasksList(prev => [...prev, taskWithDetails]);
@@ -376,18 +442,35 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           description: updatedTask.description,
           status: updatedTask.status,
           progress: progress,
-          project_stage_id: updatedTask.projectStageId,
+          project_stage_id: updatedTask.project_stage_id,
           priority: updatedTask.priority,
-          due_date: updatedTask.dueDate,
-          completed_date: updatedTask.status === 'completed' ? new Date() : updatedTask.completedDate
+          due_date: updatedTask.dueDate || updatedTask.due_date,
+          completed_date: updatedTask.status === 'completed' ? new Date() : (updatedTask.completedDate || updatedTask.completed_date)
         })
         .eq('id', updatedTask.id);
         
       if (error) throw error;
       
+      // Update the task in state
+      const updatedTaskWithBothProps: Task = {
+        ...updatedTask,
+        progress,
+        // Make sure we have both camelCase and snake_case properties for compatibility
+        assignedTo: updatedTask.assignedTo || updatedTask.assigned_to || '',
+        projectId: updatedTask.projectId || updatedTask.project_id || '',
+        completedDate: updatedTask.completedDate || (updatedTask.completed_date ? new Date(updatedTask.completed_date) : undefined),
+        dueDate: updatedTask.dueDate || (updatedTask.due_date ? new Date(updatedTask.due_date) : undefined),
+        assignedDate: updatedTask.assignedDate || (updatedTask.assigned_date ? new Date(updatedTask.assigned_date) : new Date()),
+        // Keep the original properties
+        project_id: updatedTask.projectId || updatedTask.project_id,
+        assigned_to: updatedTask.assignedTo || updatedTask.assigned_to,
+        due_date: updatedTask.dueDate || updatedTask.due_date,
+        completed_date: updatedTask.completedDate || updatedTask.completed_date,
+        assigned_date: updatedTask.assignedDate || updatedTask.assigned_date
+      };
+      
       setTasksList(prev => 
-        prev.map(task => task.id === updatedTask.id ? 
-          {...updatedTask, progress} : task)
+        prev.map(task => task.id === updatedTask.id ? updatedTaskWithBothProps : task)
       );
       
       toast({
@@ -481,7 +564,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       
       // Update local state
       setProjectsList(prev => prev.filter(project => project.id !== projectId));
-      setTasksList(prev => prev.filter(task => task.project_id !== projectId));
+      setTasksList(prev => prev.filter(task => (task.projectId || task.project_id) !== projectId));
       
       toast({
         title: "Project deleted",
@@ -521,7 +604,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setTasksList(prev => 
         prev.map(task => {
           if (task.id === taskId) {
-            return {...task, assigned_to: newAssigneeId};
+            return {
+              ...task, 
+              assignedTo: newAssigneeId,
+              assigned_to: newAssigneeId
+            };
           }
           return task;
         })
@@ -628,12 +715,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             const allCompleted = updatedSubtasks.every(st => st.status === 'completed');
             
             // Update task status and completed date if all subtasks are completed
-            if (allCompleted && !task.completed_date) {
+            if (allCompleted && !(task.completedDate || task.completed_date)) {
+              const completedDate = new Date();
               supabase
                 .from('tasks')
                 .update({
                   status: 'completed',
-                  completed_date: new Date(),
+                  completed_date: completedDate,
                   progress: 100
                 })
                 .eq('id', taskId)
@@ -642,7 +730,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               return {
                 ...updatedTask,
                 status: 'completed',
-                completed_date: new Date(),
+                completedDate: completedDate,
+                completed_date: completedDate,
                 progress: 100
               };
             } else {
@@ -867,7 +956,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const removeUser = async (userId: string) => {
     try {
       // Check if user has assigned tasks
-      const userTasks = tasksList.filter(task => task.assigned_to === userId);
+      const userTasks = tasksList.filter(task => (task.assignedTo || task.assigned_to) === userId);
       
       if (userTasks.length > 0) {
         toast({
@@ -923,10 +1012,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       // Get all completed tasks and subtasks for the current user from today
       const today = new Date();
       const todaysCompletedTasks = tasksList.filter(t => 
-        t.assigned_to === currentUser.id &&
+        (t.assignedTo || t.assigned_to) === currentUser.id &&
         t.status === 'completed' &&
-        t.completed_date &&
-        new Date(t.completed_date).toDateString() === today.toDateString()
+        (t.completedDate || t.completed_date) &&
+        new Date((t.completedDate || t.completed_date)!).toDateString() === today.toDateString()
       );
       
       // Add tasks to report_tasks
@@ -944,7 +1033,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       // Get all subtasks completed today
       const completedSubtasks: SubTask[] = [];
       tasksList
-        .filter(t => t.assigned_to === currentUser.id)
+        .filter(t => (t.assignedTo || t.assigned_to) === currentUser.id)
         .forEach(t => {
           const completed = t.subtasks.filter(st => st.status === 'completed');
           completedSubtasks.push(...completed);

@@ -16,10 +16,13 @@ const InProgressTracker = () => {
   // Group tasks by project
   const tasksByProject: Record<string, Task[]> = {};
   tasksInProgress.forEach(task => {
-    if (!tasksByProject[task.project_id]) {
-      tasksByProject[task.project_id] = [];
+    const projectId = task.projectId || task.project_id;
+    if (!projectId) return;
+    
+    if (!tasksByProject[projectId]) {
+      tasksByProject[projectId] = [];
     }
-    tasksByProject[task.project_id].push(task);
+    tasksByProject[projectId].push(task);
   });
   
   return (
@@ -57,8 +60,9 @@ const InProgressTracker = () => {
               <CardContent>
                 <div className="space-y-4">
                   {tasks.map(task => {
-                    const assignedUser = getUserById(task.assigned_to);
+                    const assignedUser = getUserById(task.assignedTo || task.assigned_to || '');
                     const inProgressSubtasks = task.subtasks.filter(st => st.status === 'in-progress');
+                    const dueDate = task.dueDate || task.due_date;
                     
                     return (
                       <div key={task.id} className="bg-white p-3 rounded-md shadow-sm">
@@ -73,12 +77,12 @@ const InProgressTracker = () => {
                           <User size={14} className="mr-1" />
                           {assignedUser?.name}
                           
-                          {task.due_date && (
+                          {dueDate && (
                             <span className="ml-4 flex items-center">
-                              Due: {format(new Date(task.due_date), 'MMM d')}
-                              {getDaysRemaining(task.due_date) !== null && (
-                                <span className={getDueStyle(getDaysRemaining(task.due_date))}>
-                                  ({getDaysRemaining(task.due_date)} days left)
+                              Due: {format(new Date(dueDate), 'MMM d')}
+                              {getDaysRemaining(dueDate) !== null && (
+                                <span className={getDueStyle(getDaysRemaining(dueDate))}>
+                                  ({getDaysRemaining(dueDate)} days left)
                                 </span>
                               )}
                             </span>
@@ -132,7 +136,7 @@ const InProgressTracker = () => {
 };
 
 // Helper function to calculate days remaining
-const getDaysRemaining = (dueDate: Date) => {
+const getDaysRemaining = (dueDate: Date | string) => {
   if (!dueDate) return null;
   const today = new Date();
   const due = new Date(dueDate);

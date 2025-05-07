@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { User, Filter, Plus, Kanban, Check, Trash, XCircle } from 'lucide-react';
 import CreateTaskDialog from './CreateTaskDialog';
-import { Task } from '@/types';
+import { Task, TaskStatus } from '@/types';
 
 const ProjectBoard = () => {
   const { currentUser, projects, users, getFilteredTasks, deleteProject, updateTask } = useAppContext();
@@ -71,7 +71,7 @@ const ProjectBoard = () => {
   const handleMarkTaskUndone = async (task: Task) => {
     const updatedTask = { 
       ...task, 
-      status: 'in-progress', 
+      status: 'in-progress' as TaskStatus, // Explicitly cast to TaskStatus
       completedDate: undefined, 
       completed_date: undefined
     };

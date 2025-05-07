@@ -2,12 +2,18 @@
 import { useAppContext } from '@/context/AppContext';
 import { Task } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Check, Kanban, User } from 'lucide-react';
+import { Check, Kanban, User, Edit, Calendar } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
+import { useState } from 'react';
+import TaskDetail from './TaskDetail';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 const InProgressTracker = () => {
   const { getTasksInProgress, getUserById, getProjectById } = useAppContext();
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  
   const tasksInProgress = getTasksInProgress().filter(task => 
     task.status === 'in-progress' || 
     task.subtasks.some(subtask => subtask.status === 'in-progress')
@@ -24,6 +30,10 @@ const InProgressTracker = () => {
     }
     tasksByProject[projectId].push(task);
   });
+
+  const handleEditTask = (task: Task) => {
+    setEditingTask(task);
+  };
   
   return (
     <div className="p-4">
@@ -68,17 +78,29 @@ const InProgressTracker = () => {
                       <div key={task.id} className="bg-white p-3 rounded-md shadow-sm">
                         <div className="flex items-start justify-between mb-2">
                           <h3 className="font-medium">{task.title}</h3>
-                          <Badge variant="outline" className="bg-status-inProgress">
-                            {task.status}
-                          </Badge>
+                          <div className="flex items-center space-x-2">
+                            <Badge variant="outline" className="bg-status-inProgress">
+                              {task.status}
+                            </Badge>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-6 w-6 p-0 text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+                              onClick={() => handleEditTask(task)}
+                            >
+                              <Edit size={14} />
+                              <span className="sr-only">Edit task</span>
+                            </Button>
+                          </div>
                         </div>
                         
                         <div className="text-sm text-gray-500 flex items-center mb-3">
                           <User size={14} className="mr-1" />
-                          {assignedUser?.name}
+                          {assignedUser?.name || 'Unassigned'}
                           
                           {dueDate && (
                             <span className="ml-4 flex items-center">
+                              <Calendar size={14} className="mr-1" />
                               Due: {format(new Date(dueDate), 'MMM d')}
                               {getDaysRemaining(dueDate) !== null && (
                                 <span className={getDueStyle(getDaysRemaining(dueDate))}>
@@ -131,6 +153,13 @@ const InProgressTracker = () => {
           No tasks currently in progress
         </div>
       )}
+
+      {/* Dialog for editing task */}
+      <Dialog open={!!editingTask} onOpenChange={(open) => !open && setEditingTask(null)}>
+        <DialogContent className="max-w-3xl p-0 overflow-hidden">
+          {editingTask && <TaskDetail task={editingTask} onClose={() => setEditingTask(null)} />}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

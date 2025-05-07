@@ -1,4 +1,3 @@
-
 import { Task, SubTask } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
@@ -32,28 +31,41 @@ export function useTaskOperations(
         }, 
         async (payload) => {
           console.log('Task change detected:', payload);
-          // Reload all tasks data to ensure we have the latest
+          
           try {
-            const { data: tasksData, error: tasksError } = await supabase
-              .from('tasks')
-              .select('*');
+            // Instead of reloading everything, handle changes incrementally
+            if (payload.eventType === 'DELETE') {
+              // For deletes, just remove the task from state
+              const deletedId = payload.old.id;
+              setTasksList(prev => prev.filter(task => task.id !== deletedId));
               
-            if (tasksError) {
-              console.error("Error reloading tasks:", tasksError);
-              return;
+              toast({
+                title: "Task removed",
+                description: "A task has been deleted."
+              });
+            } 
+            else if (payload.eventType === 'INSERT') {
+              // For inserts, fetch the new task and add it
+              const taskDetails = await fetchTaskDetails(payload.new);
+              if (taskDetails) {
+                setTasksList(prev => {
+                  // Check if this task already exists in the list to prevent duplicates
+                  if (prev.some(task => task.id === taskDetails.id)) {
+                    return prev;
+                  }
+                  return [...prev, taskDetails];
+                });
+              }
+            } 
+            else if (payload.eventType === 'UPDATE') {
+              // For updates, update the existing task in-place
+              const taskDetails = await fetchTaskDetails(payload.new);
+              if (taskDetails) {
+                setTasksList(prev => 
+                  prev.map(task => task.id === taskDetails.id ? taskDetails : task)
+                );
+              }
             }
-            
-            // Process tasks with their details
-            const tasksWithDetails = await Promise.all(
-              tasksData.map(task => fetchTaskDetails(task))
-            );
-            
-            setTasksList(tasksWithDetails.filter(Boolean) as Task[]);
-            
-            toast({
-              title: "Tasks updated",
-              description: "Task list has been refreshed with latest changes."
-            });
           } catch (error) {
             console.error("Error processing realtime update:", error);
           }
@@ -118,54 +130,38 @@ export function useTaskOperations(
 
   const addTask = async (task: Omit<Task, 'id' | 'assignedDate' | 'progress'>) => {
     try {
-      // Insert task in Supabase
-      const { data: newTask, error } = await supabase
-        .from('tasks')
-        .insert({
-          title: task.title,
-          description: task.description,
-          assigned_to: task.assignedTo,
-          project_id: task.projectId,
-          project_stage_id: task.project_stage_id,
-          status: task.status,
-          priority: task.priority,
-          due_date: task.dueDate
-        })
-        .select()
-        .single();
+      // Check if this is a multi-user task assignment
+      const assignees = Array.isArray(task.assignedTo) ? task.assignedTo : [task.assignedTo];
+      
+      // Create a separate task for each assignee
+      for (const assignee of assignees) {
+        // Insert task in Supabase
+        const { data: newTask, error } = await supabase
+          .from('tasks')
+          .insert({
+            title: task.title,
+            description: task.description,
+            assigned_to: assignee,
+            project_id: task.projectId,
+            project_stage_id: task.project_stage_id,
+            status: task.status,
+            priority: task.priority,
+            due_date: task.dueDate
+          })
+          .select()
+          .single();
+          
+        if (error) throw error;
         
-      if (error) throw error;
-      
-      // Add newly created task to state with empty subtasks and notes
-      const taskWithDetails: Task = {
-        id: newTask.id,
-        title: newTask.title,
-        description: newTask.description || '',
-        assignedTo: newTask.assigned_to || '',
-        projectId: newTask.project_id || '',
-        projectStage: task.projectStage,
-        status: task.status,
-        subtasks: [],
-        notes: [],
-        assignedDate: newTask.assigned_date ? new Date(newTask.assigned_date) : new Date(),
-        dueDate: newTask.due_date ? new Date(newTask.due_date) : undefined,
-        completedDate: newTask.completed_date ? new Date(newTask.completed_date) : undefined,
-        progress: 0,
-        priority: task.priority || 'Media',
-        // Keep original properties
-        project_id: newTask.project_id,
-        project_stage_id: newTask.project_stage_id,
-        assigned_to: newTask.assigned_to,
-        assigned_date: newTask.assigned_date,
-        due_date: newTask.due_date,
-        completed_date: newTask.completed_date
-      };
-      
-      setTasksList(prev => [...prev, taskWithDetails]);
+        // Note: We don't need to add the task to state here
+        // The realtime subscription will handle this for us
+      }
       
       toast({
         title: "Task created",
-        description: `Task "${task.title}" has been created.`
+        description: assignees.length > 1 
+          ? `Task "${task.title}" has been assigned to ${assignees.length} users.`
+          : `Task "${task.title}" has been created.`
       });
     } catch (error: any) {
       console.error("Error creating task:", error);
@@ -211,6 +207,7 @@ export function useTaskOperations(
         assigned_date: updatedTask.assignedDate || updatedTask.assigned_date
       };
       
+      // The local update ensures immediate UI feedback while we wait for realtime updates
       setTasksList(prev => 
         prev.map(task => task.id === updatedTask.id ? updatedTaskWithBothProps : task)
       );
@@ -244,7 +241,8 @@ export function useTaskOperations(
       // Delete task in Supabase
       await deleteTaskInSupabase(taskId);
       
-      // Update local state
+      // Update local state - this gives immediate visual feedback
+      // The realtime subscription will also handle this
       setTasksList(prev => prev.filter(task => task.id !== taskId));
       
       toast({

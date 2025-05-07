@@ -1,3 +1,4 @@
+
 import { User, Task, Project, Report, SubTask } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
@@ -144,6 +145,7 @@ export function useDataLoading(
           
         // Format each task data
         const completedTasks: Task[] = reportTasksData?.map(rt => {
+          // Fix: Access the tasks property of each item in reportTasksData
           const taskData = rt.tasks;
           return {
             id: taskData.id,
@@ -169,6 +171,7 @@ export function useDataLoading(
           
         // Format each subtask data
         const completedSubtasks: SubTask[] = reportSubtasksData?.map(rs => {
+          // Fix: Access the subtasks property of each item in reportSubtasksData
           const subtaskData = rs.subtasks;
           return {
             id: subtaskData.id,

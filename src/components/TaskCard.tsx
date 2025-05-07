@@ -295,7 +295,7 @@ const TaskCard = ({ task, projectColor, viewMode }: TaskCardProps) => {
                     {task.status.replace(/-/g, ' ')}
                   </Badge>
                   <div className="text-xs text-gray-500 flex items-center">
-                    <Clock size={12} className="mr-1" />
+                    <Clock size={14} className="mr-1" />
                     {formattedDueDate}
                     {/* Days remaining counter */}
                     {daysRemaining !== null && (

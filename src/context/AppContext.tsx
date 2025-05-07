@@ -226,7 +226,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             completedDate: taskData.completed_date ? new Date(taskData.completed_date) : undefined,
             // Keep original properties
             project_id: taskData.project_id,
-            assigned_to: taskData.assigned_to
+            assigned_to: taskData.assigned_to,
+            assigned_date: taskData.assigned_date,
+            due_date: taskData.due_date,
+            completed_date: taskData.completed_date
           };
         }) || [];
           

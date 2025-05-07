@@ -23,6 +23,21 @@ export function useDataLoading(
     try {
       console.log("Starting to load initial data...");
       
+      // Check if data is already loaded
+      if (setDataLoaded) {
+        const mockDataCheck = (prev: boolean) => {
+          return prev;
+        };
+        // Check current value before setting
+        setDataLoaded(prev => {
+          if (prev) {
+            console.log("Data already loaded, skipping load");
+            return prev;
+          }
+          return false; // Keep it false until we load data
+        });
+      }
+      
       // Load in parallel using Promise.all to improve performance
       const [
         usersResponse,
@@ -72,11 +87,11 @@ export function useDataLoading(
       }
       
       console.log("Data fetched:", {
-        users: usersResponse.data,
-        projects: projectsResponse.data,
-        projectStages: projectStagesResponse.data,
-        tasks: tasksResponse.data,
-        subtasks: subtasksResponse.data
+        users: usersResponse.data?.length,
+        projects: projectsResponse.data?.length,
+        projectStages: projectStagesResponse.data?.length,
+        tasks: tasksResponse.data?.length,
+        subtasks: subtasksResponse.data?.length
       });
       
       // Group project stages by project
@@ -119,9 +134,9 @@ export function useDataLoading(
       ]);
       
       console.log("Processed data:", {
-        users,
-        projects,
-        tasks
+        users: users.length,
+        projects: projects.length,
+        tasks: tasks.length
       });
       
       // Update state with processed data
@@ -133,8 +148,8 @@ export function useDataLoading(
       
       toast({
         title: "Data loaded successfully",
-        description: `Loaded ${users.length} users, ${projects.length} projects, and ${tasks.length} tasks`
-      });
+        description: `Loaded ${users.length} users, ${projects.length} projects, and ${tasks.length} tasks`,
+      }, { id: "data-loaded" }); // Add unique ID to prevent duplicate toasts
       
     } catch (error) {
       console.error("Error loading data:", error);

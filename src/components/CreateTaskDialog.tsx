@@ -30,6 +30,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { format } from 'date-fns';
+import { useToast } from '@/components/ui/use-toast';
 
 interface CreateTaskDialogProps {
   open: boolean;
@@ -38,12 +39,13 @@ interface CreateTaskDialogProps {
 
 const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
   const { projects, users, addTask, currentUser } = useAppContext();
+  const { toast } = useToast();
   
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [projectId, setProjectId] = useState('');
   const [projectStageId, setProjectStageId] = useState('');
-  const [assignedTo, setAssignedTo] = useState<string>(''); // Changed to just string type
+  const [assignedTo, setAssignedTo] = useState<string>('');
   const [isMultipleAssignees, setIsMultipleAssignees] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
@@ -67,6 +69,11 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
           
         if (error) {
           console.error('Error fetching project stages:', error);
+          toast({
+            title: "Error",
+            description: "Failed to load project stages",
+            variant: "destructive"
+          });
           return;
         }
         
@@ -85,58 +92,72 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
       setProjectStages([]);
       setProjectStageId('');
     }
-  }, [projectId, selectedProject]);
+  }, [projectId, selectedProject, toast]);
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (isMultipleAssignees) {
-      // For multiple assignees, create a task for each selected user
-      selectedUsers.forEach(userId => {
-        addTask({
+    try {
+      if (isMultipleAssignees) {
+        // For multiple assignees, create a task for each selected user
+        for (const userId of selectedUsers) {
+          await addTask({
+            title,
+            description,
+            projectId,
+            project_id: projectId,
+            project_stage_id: projectStageId, // Make sure this is the ID, not name
+            projectStage: projectStages.find(stage => stage.id === projectStageId)?.name || '',
+            assignedTo: userId,
+            status: 'not-started',
+            subtasks: [],
+            notes: [],
+            dueDate,
+            priority
+          });
+        }
+      } else {
+        // For single assignee
+        await addTask({
           title,
           description,
           projectId,
           project_id: projectId,
-          project_stage_id: projectStageId,
+          project_stage_id: projectStageId, // Make sure this is the ID, not name
           projectStage: projectStages.find(stage => stage.id === projectStageId)?.name || '',
-          assignedTo: userId,
+          assignedTo,
           status: 'not-started',
           subtasks: [],
           notes: [],
           dueDate,
           priority
         });
+      }
+      
+      // Reset form and close dialog
+      setTitle('');
+      setDescription('');
+      setProjectId('');
+      setProjectStageId('');
+      setAssignedTo('');
+      setSelectedUsers([]);
+      setIsMultipleAssignees(false);
+      setDueDate(undefined);
+      setPriority('Media');
+      onOpenChange(false);
+      
+      toast({
+        title: "Task created",
+        description: "Your task has been created successfully"
       });
-    } else {
-      // For single assignee
-      addTask({
-        title,
-        description,
-        projectId,
-        project_id: projectId,
-        project_stage_id: projectStageId,
-        projectStage: projectStages.find(stage => stage.id === projectStageId)?.name || '',
-        assignedTo,
-        status: 'not-started',
-        subtasks: [],
-        notes: [],
-        dueDate,
-        priority
+    } catch (error: any) {
+      console.error('Error creating task:', error);
+      toast({
+        title: "Failed to create task",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive"
       });
     }
-    
-    // Reset form and close dialog
-    setTitle('');
-    setDescription('');
-    setProjectId('');
-    setProjectStageId('');
-    setAssignedTo('');
-    setSelectedUsers([]);
-    setIsMultipleAssignees(false);
-    setDueDate(undefined);
-    setPriority('Media');
-    onOpenChange(false);
   };
   
   const toggleUserSelection = (userId: string) => {
@@ -261,7 +282,7 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
                 )}
               </div>
             ) : (
-              <Select value={assignedTo as string} onValueChange={setAssignedTo} required>
+              <Select value={assignedTo} onValueChange={setAssignedTo} required>
                 <SelectTrigger id="assignedTo">
                   <SelectValue placeholder="Select a user" />
                 </SelectTrigger>

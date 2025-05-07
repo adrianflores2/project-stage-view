@@ -1,3 +1,4 @@
+
 import { Task, SubTask } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
@@ -147,6 +148,17 @@ export function useTaskOperations(
       const assignees = Array.isArray(task.assignedTo) ? task.assignedTo : [task.assignedTo];
       
       for (const assignee of assignees) {
+        console.log("Creating task with values:", {
+          title: task.title,
+          description: task.description,
+          assigned_to: assignee,
+          project_id: task.projectId || task.project_id,
+          project_stage_id: task.project_stage_id, // This should be a UUID
+          status: task.status,
+          priority: task.priority,
+          due_date: task.dueDate || task.due_date,
+        });
+      
         // Insert task in Supabase for each assignee
         const { data: newTask, error } = await supabase
           .from('tasks')
@@ -155,7 +167,7 @@ export function useTaskOperations(
             description: task.description,
             assigned_to: assignee,
             project_id: task.projectId || task.project_id,
-            project_stage_id: task.projectStage || task.project_stage_id,
+            project_stage_id: task.project_stage_id, // Make sure this is a UUID
             status: task.status,
             priority: task.priority,
             due_date: task.dueDate || task.due_date,
@@ -164,7 +176,10 @@ export function useTaskOperations(
           .select()
           .single();
           
-        if (error) throw error;
+        if (error) {
+          console.error("Error creating task:", error);
+          throw error;
+        }
         
         // We don't need to manually update the state here
         // The realtime subscription will handle adding the task to state
@@ -181,6 +196,7 @@ export function useTaskOperations(
         description: error.message,
         variant: "destructive"
       });
+      throw error; // Re-throw to allow the calling component to handle it
     }
   };
 

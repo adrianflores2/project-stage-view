@@ -1,17 +1,22 @@
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import InProgressTracker from '@/components/InProgressTracker';
 import { useAppContext } from '@/context/AppContext';
 
 const InProgress = () => {
-  const { currentUser, loadInitialData } = useAppContext();
+  const { currentUser, loadInitialData, dataLoaded } = useAppContext();
+  const [isLoading, setIsLoading] = useState(false);
   
-  // Ensure data is loaded
+  // Ensure data is loaded just once
   useEffect(() => {
-    if (currentUser) {
-      loadInitialData();
+    if (currentUser && !dataLoaded && !isLoading) {
+      console.log("Loading initial data from InProgress page");
+      setIsLoading(true);
+      loadInitialData().finally(() => {
+        setIsLoading(false);
+      });
     }
-  }, [currentUser, loadInitialData]);
+  }, [currentUser, loadInitialData, dataLoaded, isLoading]);
   
   return <InProgressTracker />;
 };

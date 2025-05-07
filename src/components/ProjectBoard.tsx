@@ -69,12 +69,24 @@ const ProjectBoard = () => {
   };
   
   const handleMarkTaskUndone = async (task: Task) => {
+    // Check if current user has permission to undo this task
+    const canUndo = currentUser?.role === 'coordinator' || 
+                   currentUser?.role === 'supervisor' || 
+                   (currentUser?.role === 'worker' && (task.assignedTo === currentUser.id || task.assigned_to === currentUser.id));
+    
+    if (!canUndo) {
+      console.error("User doesn't have permission to undo this task");
+      return;
+    }
+    
     const updatedTask = { 
       ...task, 
       status: 'in-progress' as TaskStatus, // Explicitly cast to TaskStatus
       completedDate: undefined, 
       completed_date: undefined
     };
+    
+    console.log("Marking task as undone:", updatedTask);
     await updateTask(updatedTask);
   };
   

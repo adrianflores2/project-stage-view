@@ -1,3 +1,4 @@
+
 import { Task } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -77,7 +78,19 @@ export async function updateTaskInSupabase(
   progress: number, 
   completedDate: Date | null
 ) {
-  const { error } = await supabase
+  console.log("Updating task in Supabase:", {
+    id: updatedTask.id,
+    title: updatedTask.title,
+    description: updatedTask.description,
+    status: updatedTask.status,
+    progress: progress,
+    project_stage_id: updatedTask.project_stage_id,
+    priority: updatedTask.priority,
+    due_date: updatedTask.dueDate || updatedTask.due_date,
+    completed_date: completedDate
+  });
+
+  const { data, error } = await supabase
     .from('tasks')
     .update({
       title: updatedTask.title,
@@ -91,8 +104,12 @@ export async function updateTaskInSupabase(
     })
     .eq('id', updatedTask.id);
     
-  if (error) throw error;
+  if (error) {
+    console.error("Error updating task in Supabase:", error);
+    throw error;
+  }
   
+  console.log("Task updated successfully:", data);
   return true;
 }
 

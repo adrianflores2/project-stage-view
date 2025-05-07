@@ -226,6 +226,11 @@ export function useTaskOperations(
       // We don't need to manually update the state here
       // The realtime subscription will handle updating the task in state
       
+      toast({
+        title: "Task updated",
+        description: "Task has been saved successfully."
+      });
+      
     } catch (error: any) {
       console.error("Error updating task:", error);
       toast({

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Task } from '@/types';
 import { useAppContext } from '@/context/AppContext';
@@ -20,6 +19,11 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Dialog } from '@/components/ui/dialog';
 import TaskDetail from './TaskDetail';
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 
 interface TaskCardProps {
   task: Task;
@@ -28,10 +32,11 @@ interface TaskCardProps {
 }
 
 const TaskCard = ({ task, projectColor, viewMode }: TaskCardProps) => {
-  const { currentUser, getUserById } = useAppContext();
+  const { currentUser, getUserById, getUserByName, getProjectById } = useAppContext();
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   
   const assignedUser = getUserById(task.assignedTo);
+  const project = getProjectById(task.projectId);
   
   // Status colors
   const statusColors = {
@@ -95,6 +100,40 @@ const TaskCard = ({ task, projectColor, viewMode }: TaskCardProps) => {
     const b = parseInt(hex.substring(4, 6), 16);
     return `rgba(${r}, ${g}, ${b}, 0.1)`;
   };
+
+  // Enhanced hover details for completed tasks
+  const renderTaskDetails = () => (
+    <div className="space-y-2">
+      <div className="flex items-center">
+        <User size={16} className="mr-2" />
+        <span className="font-medium">{assignedUser?.name || "Unassigned"}</span>
+      </div>
+      
+      <div>
+        <p className="text-sm font-medium mb-1">Project Stage: {task.projectStage}</p>
+        
+        {task.subtasks.length > 0 && (
+          <div className="mt-2">
+            <p className="text-sm font-medium mb-1">Subtasks:</p>
+            <div className="space-y-1">
+              {task.subtasks.map(subtask => (
+                <div 
+                  key={subtask.id} 
+                  className={`text-xs py-1 px-2 rounded-sm flex items-center 
+                    ${subtask.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-gray-100'}`}
+                >
+                  {subtask.title}
+                  {subtask.status === 'completed' && (
+                    <Check size={12} className="ml-1 text-green-600" />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
   
   if (viewMode === 'list') {
     return (
@@ -203,119 +242,240 @@ const TaskCard = ({ task, projectColor, viewMode }: TaskCardProps) => {
     );
   }
   
-  // Grid view (original card)
+  // Grid view with hover card for completed tasks
   return (
     <>
-      <Card 
-        className="task-card w-full cursor-pointer group hover:shadow-md transition-shadow"
-        style={{ 
-          borderLeft: `4px solid ${projectColor}`,
-          background: getBackgroundTint()
-        }} 
-        onClick={() => canViewDetails && setShowDetailDialog(true)}
-      >
-        <div className="p-3 pb-1">
-          <div className="flex justify-between items-start">
-            <h3 className="text-sm font-medium line-clamp-2">{task.title}</h3>
-            <div className="flex items-center space-x-1">
-              {task.subtasks.length > 0 && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center text-xs text-gray-500">
-                      <List size={14} className="mr-1" />
-                      <span>{task.subtasks.filter(st => st.status === 'completed').length}/{task.subtasks.length}</span>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Subtasks completed</p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
+      {task.status === 'completed' ? (
+        <HoverCard>
+          <HoverCardTrigger asChild>
+            <Card 
+              className="task-card w-full cursor-pointer group hover:shadow-md transition-shadow"
+              style={{ 
+                borderLeft: `4px solid ${projectColor}`,
+                background: getBackgroundTint()
+              }} 
+              onClick={() => canViewDetails && setShowDetailDialog(true)}
+            >
+              <div className="p-3 pb-1">
+                <div className="flex justify-between items-start">
+                  <h3 className="text-sm font-medium line-clamp-2">{task.title}</h3>
+                  <div className="flex items-center space-x-1">
+                    {task.subtasks.length > 0 && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center text-xs text-gray-500">
+                            <List size={14} className="mr-1" />
+                            <span>{task.subtasks.filter(st => st.status === 'completed').length}/{task.subtasks.length}</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Subtasks completed</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                    
+                    {task.notes.length > 0 && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center text-xs text-gray-500">
+                            <MessageSquare size={14} />
+                            <span className="ml-1">{task.notes.length}</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{task.notes.length} note{task.notes.length !== 1 ? 's' : ''}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex justify-between items-center mt-1">
+                  <Badge variant="outline" className={`text-xs px-2 ${statusColors[task.status]}`}>
+                    {task.status.replace(/-/g, ' ')}
+                  </Badge>
+                  <div className="text-xs text-gray-500 flex items-center">
+                    <Clock size={12} className="mr-1" />
+                    {formattedDueDate}
+                    {/* Days remaining counter */}
+                    {daysRemaining !== null && (
+                      <span className={`ml-1 ${getDueColor()}`}>
+                        ({daysRemaining} {daysRemaining === 1 ? 'day' : 'days'} left)
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
               
-              {task.notes.length > 0 && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center text-xs text-gray-500">
-                      <MessageSquare size={14} />
-                      <span className="ml-1">{task.notes.length}</span>
+              <div className="p-3 pt-1 pb-2">
+                {/* Task completion progress */}
+                <Progress 
+                  value={task.progress} 
+                  className="h-1 mb-3"
+                  indicatorClassName={task.status === 'completed' ? 'bg-status-completed' : 'bg-status-inProgress'}
+                />
+                
+                <div className="flex justify-between items-center">
+                  <div className="text-xs text-gray-600 flex items-center">
+                    <User size={12} className="mr-1" />
+                    {assignedUser?.name}
+                    {task.priority && (
+                      <span className={`ml-1.5 ${priorityColors[task.priority] || ''}`}>
+                        ({task.priority})
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs font-medium">
+                    {task.progress}%
+                  </div>
+                </div>
+                
+                {/* Show subtasks directly in the card */}
+                {task.subtasks.length > 0 && (
+                  <div className="mt-2">
+                    <div className="text-xs font-medium text-gray-500 mb-1">Subtasks:</div>
+                    <div className="flex flex-wrap gap-1">
+                      {task.subtasks.map(subtask => (
+                        <span 
+                          key={subtask.id}
+                          className={`text-xs px-1.5 py-0.5 rounded-sm ${getSubtaskStatusStyle(subtask.status)}`}
+                        >
+                          {subtask.title}
+                        </span>
+                      ))}
                     </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{task.notes.length} note{task.notes.length !== 1 ? 's' : ''}</p>
-                  </TooltipContent>
-                </Tooltip>
+                  </div>
+                )}
+              </div>
+              
+              {/* Notes preview that shows on hover */}
+              {task.notes.length > 0 && (
+                <div className="p-0 hidden group-hover:block">
+                  <div className="bg-gray-50 w-full p-3 text-xs text-gray-600">
+                    <div className="font-medium mb-1">Latest note:</div>
+                    <p className="line-clamp-2">{task.notes[task.notes.length - 1].content}</p>
+                  </div>
+                </div>
               )}
+            </Card>
+          </HoverCardTrigger>
+          <HoverCardContent className="w-80">
+            {renderTaskDetails()}
+          </HoverCardContent>
+        </HoverCard>
+      ) : (
+        // Regular card for non-completed tasks (keep original design)
+        <Card 
+          className="task-card w-full cursor-pointer group hover:shadow-md transition-shadow"
+          style={{ 
+            borderLeft: `4px solid ${projectColor}`,
+            background: getBackgroundTint()
+          }} 
+          onClick={() => canViewDetails && setShowDetailDialog(true)}
+        >
+          <div className="p-3 pb-1">
+            <div className="flex justify-between items-start">
+              <h3 className="text-sm font-medium line-clamp-2">{task.title}</h3>
+              <div className="flex items-center space-x-1">
+                {task.subtasks.length > 0 && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center text-xs text-gray-500">
+                        <List size={14} className="mr-1" />
+                        <span>{task.subtasks.filter(st => st.status === 'completed').length}/{task.subtasks.length}</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Subtasks completed</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+                
+                {task.notes.length > 0 && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center text-xs text-gray-500">
+                        <MessageSquare size={14} />
+                        <span className="ml-1">{task.notes.length}</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{task.notes.length} note{task.notes.length !== 1 ? 's' : ''}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+              </div>
             </div>
-          </div>
-          
-          <div className="flex justify-between items-center mt-1">
-            <Badge variant="outline" className={`text-xs px-2 ${statusColors[task.status]}`}>
-              {task.status.replace(/-/g, ' ')}
-            </Badge>
-            <div className="text-xs text-gray-500 flex items-center">
-              <Clock size={12} className="mr-1" />
-              {formattedDueDate}
-              {/* Days remaining counter */}
-              {daysRemaining !== null && (
-                <span className={`ml-1 ${getDueColor()}`}>
-                  ({daysRemaining} {daysRemaining === 1 ? 'day' : 'days'} left)
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-        
-        <div className="p-3 pt-1 pb-2">
-          {/* Task completion progress */}
-          <Progress 
-            value={task.progress} 
-            className="h-1 mb-3"
-            indicatorClassName={task.status === 'completed' ? 'bg-status-completed' : 'bg-status-inProgress'}
-          />
-          
-          <div className="flex justify-between items-center">
-            <div className="text-xs text-gray-600 flex items-center">
-              <User size={12} className="mr-1" />
-              {assignedUser?.name}
-              {task.priority && (
-                <span className={`ml-1.5 ${priorityColors[task.priority] || ''}`}>
-                  ({task.priority})
-                </span>
-              )}
-            </div>
-            <div className="text-xs font-medium">
-              {task.progress}%
-            </div>
-          </div>
-          
-          {/* Show subtasks directly in the card */}
-          {task.subtasks.length > 0 && (
-            <div className="mt-2">
-              <div className="text-xs font-medium text-gray-500 mb-1">Subtasks:</div>
-              <div className="flex flex-wrap gap-1">
-                {task.subtasks.map(subtask => (
-                  <span 
-                    key={subtask.id}
-                    className={`text-xs px-1.5 py-0.5 rounded-sm ${getSubtaskStatusStyle(subtask.status)}`}
-                  >
-                    {subtask.title}
+            
+            <div className="flex justify-between items-center mt-1">
+              <Badge variant="outline" className={`text-xs px-2 ${statusColors[task.status]}`}>
+                {task.status.replace(/-/g, ' ')}
+              </Badge>
+              <div className="text-xs text-gray-500 flex items-center">
+                <Clock size={12} className="mr-1" />
+                {formattedDueDate}
+                {/* Days remaining counter */}
+                {daysRemaining !== null && (
+                  <span className={`ml-1 ${getDueColor()}`}>
+                    ({daysRemaining} {daysRemaining === 1 ? 'day' : 'days'} left)
                   </span>
-                ))}
+                )}
+              </div>
+            </div>
+          </div>
+          
+          <div className="p-3 pt-1 pb-2">
+            {/* Task completion progress */}
+            <Progress 
+              value={task.progress} 
+              className="h-1 mb-3"
+              indicatorClassName={task.status === 'completed' ? 'bg-status-completed' : 'bg-status-inProgress'}
+            />
+            
+            <div className="flex justify-between items-center">
+              <div className="text-xs text-gray-600 flex items-center">
+                <User size={12} className="mr-1" />
+                {assignedUser?.name}
+                {task.priority && (
+                  <span className={`ml-1.5 ${priorityColors[task.priority] || ''}`}>
+                    ({task.priority})
+                  </span>
+                )}
+              </div>
+              <div className="text-xs font-medium">
+                {task.progress}%
+              </div>
+            </div>
+            
+            {/* Show subtasks directly in the card */}
+            {task.subtasks.length > 0 && (
+              <div className="mt-2">
+                <div className="text-xs font-medium text-gray-500 mb-1">Subtasks:</div>
+                <div className="flex flex-wrap gap-1">
+                  {task.subtasks.map(subtask => (
+                    <span 
+                      key={subtask.id}
+                      className={`text-xs px-1.5 py-0.5 rounded-sm ${getSubtaskStatusStyle(subtask.status)}`}
+                    >
+                      {subtask.title}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {/* Notes preview that shows on hover */}
+          {task.notes.length > 0 && (
+            <div className="p-0 hidden group-hover:block">
+              <div className="bg-gray-50 w-full p-3 text-xs text-gray-600">
+                <div className="font-medium mb-1">Latest note:</div>
+                <p className="line-clamp-2">{task.notes[task.notes.length - 1].content}</p>
               </div>
             </div>
           )}
-        </div>
-        
-        {/* Notes preview that shows on hover */}
-        {task.notes.length > 0 && (
-          <div className="p-0 hidden group-hover:block">
-            <div className="bg-gray-50 w-full p-3 text-xs text-gray-600">
-              <div className="font-medium mb-1">Latest note:</div>
-              <p className="line-clamp-2">{task.notes[task.notes.length - 1].content}</p>
-            </div>
-          </div>
-        )}
-      </Card>
+        </Card>
+      )}
       
       {showDetailDialog && (
         <TaskDetail 

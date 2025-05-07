@@ -16,8 +16,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Check, Calendar } from 'lucide-react';
+import { Check, Calendar, FileText, List, User } from 'lucide-react';
 import { Task } from '@/types';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 const DailyActivity = () => {
   const { tasks, getUserById, getProjectById } = useAppContext();
@@ -64,6 +65,20 @@ const DailyActivity = () => {
     new Date(b).getTime() - new Date(a).getTime()
   );
 
+  // Group tasks by project
+  const groupTasksByProject = (tasks: Task[]) => {
+    return tasks.reduce<Record<string, Task[]>>((groups, task) => {
+      if (!task.projectId) return groups;
+      
+      if (!groups[task.projectId]) {
+        groups[task.projectId] = [];
+      }
+      
+      groups[task.projectId].push(task);
+      return groups;
+    }, {});
+  };
+
   return (
     <div className="p-4">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
@@ -103,51 +118,117 @@ const DailyActivity = () => {
             dateHeader = format(dateObj, 'MMMM d, yyyy');
           }
           
+          // Group tasks by project for this date
+          const tasksByProject = groupTasksByProject(tasksForDate);
+          const projectIds = Object.keys(tasksByProject);
+          
           return (
-            <div key={dateStr} className="mb-6">
-              <h2 className="text-lg font-medium mb-3">{dateHeader}</h2>
-              <div className="space-y-3">
-                {tasksForDate.map(task => {
-                  const assignedUser = getUserById(task.assignedTo);
-                  const project = getProjectById(task.projectId);
+            <div key={dateStr} className="mb-8">
+              <h2 className="text-lg font-medium mb-4 flex items-center">
+                <FileText className="mr-2" /> 
+                {dateHeader} - {tasksForDate.length} completed task{tasksForDate.length !== 1 ? 's' : ''}
+              </h2>
+              
+              <Accordion type="multiple" className="space-y-4">
+                {projectIds.map(projectId => {
+                  const project = getProjectById(projectId);
+                  const projectTasks = tasksByProject[projectId];
+                  
+                  if (!project) return null;
                   
                   return (
-                    <Card key={task.id} className="overflow-hidden">
-                      <div 
-                        className="h-1" 
-                        style={{ backgroundColor: project?.color || '#cbd5e1' }}
-                      ></div>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base font-medium flex items-center justify-between">
-                          <div className="flex items-center">
-                            <Check size={16} className="mr-2 text-green-500" />
-                            {task.title}
-                          </div>
-                          <Badge variant="outline" className="bg-status-completed text-white">
-                            Completed
+                    <AccordionItem 
+                      key={projectId} 
+                      value={projectId}
+                      className="border rounded-lg overflow-hidden"
+                      style={{ borderTop: `3px solid ${project.color}` }}
+                    >
+                      <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                        <div className="flex items-center">
+                          <div 
+                            className="w-3 h-3 rounded-full mr-2" 
+                            style={{ backgroundColor: project.color }}
+                          ></div>
+                          <span className="font-medium">{project.name}</span>
+                          <Badge className="ml-2 bg-gray-200 text-gray-800">
+                            {projectTasks.length} task{projectTasks.length !== 1 ? 's' : ''}
                           </Badge>
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="text-sm">
-                        <div className="flex flex-wrap gap-2 mb-2">
-                          <div className="text-gray-500">Project: <span className="font-medium">{project?.name}</span></div>
-                          <div className="text-gray-500">Stage: <span className="font-medium">{task.projectStage}</span></div>
-                          <div className="text-gray-500">Assigned to: <span className="font-medium">{assignedUser?.name}</span></div>
-                          {task.priority && (
-                            <div className="text-gray-500">Priority: <span className="font-medium">{task.priority}</span></div>
-                          )}
                         </div>
-                        
-                        {task.completedDate && (
-                          <div className="text-xs text-gray-500 mt-2">
-                            Completed at: {format(new Date(task.completedDate), 'h:mm a')}
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-3 px-4 pb-4">
+                          {projectTasks.map(task => {
+                            const assignedUser = getUserById(task.assignedTo);
+                            
+                            return (
+                              <Card key={task.id} className="overflow-hidden border-l-4" style={{ borderLeftColor: project.color }}>
+                                <CardHeader className="py-3">
+                                  <CardTitle className="text-base flex items-center justify-between">
+                                    <div className="flex items-center">
+                                      <Check size={16} className="mr-2 text-green-500" />
+                                      {task.title}
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      {task.completedDate && format(new Date(task.completedDate), 'h:mm a')}
+                                    </div>
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent className="py-2">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm mb-3">
+                                    <div className="flex items-center text-gray-700">
+                                      <User size={14} className="mr-1.5" />
+                                      Assigned to: <span className="font-medium ml-1">{assignedUser?.name}</span>
+                                    </div>
+                                    <div className="text-gray-700">
+                                      Stage: <span className="font-medium">{task.projectStage}</span>
+                                    </div>
+                                    {task.priority && (
+                                      <div className="text-gray-700">
+                                        Priority: <span className="font-medium">{task.priority}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                  
+                                  {task.description && (
+                                    <div className="text-sm mb-3">
+                                      <div className="font-medium mb-0.5">Description:</div>
+                                      <p className="text-gray-600">{task.description}</p>
+                                    </div>
+                                  )}
+                                  
+                                  {task.subtasks.length > 0 && (
+                                    <div className="mt-3">
+                                      <div className="flex items-center mb-1 text-sm font-medium">
+                                        <List size={14} className="mr-1.5" />
+                                        Subtasks ({task.subtasks.filter(s => s.status === 'completed').length}/{task.subtasks.length} completed)
+                                      </div>
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                        {task.subtasks.map(subtask => (
+                                          <div 
+                                            key={subtask.id} 
+                                            className={`text-xs py-1.5 px-2 flex items-center rounded-sm
+                                              ${subtask.status === 'completed' 
+                                                ? 'bg-green-50 text-green-800 border border-green-200' 
+                                                : 'bg-gray-50 border border-gray-200'
+                                              }`}
+                                          >
+                                            {subtask.status === 'completed' && <Check size={12} className="mr-1.5 text-green-600" />}
+                                            {subtask.title}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </CardContent>
+                              </Card>
+                            );
+                          })}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
                   );
                 })}
-              </div>
+              </Accordion>
             </div>
           );
         })

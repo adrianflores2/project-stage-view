@@ -1,3 +1,4 @@
+
 import { Task, SubTask } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
@@ -106,7 +107,12 @@ export function useTaskOperations(
     return filteredTasks.filter(task => 
       task.status === 'completed' && 
       (task.completedDate || task.completed_date) && 
-      new Date(task.completedDate || task.completed_date!).toDateString() === date.toDateString()
+      // Fix: Convert string date to Date object if needed
+      (task.completedDate instanceof Date 
+        ? task.completedDate.toDateString() === date.toDateString()
+        : task.completed_date instanceof Date 
+          ? task.completed_date.toDateString() === date.toDateString() 
+          : new Date(task.completedDate || task.completed_date as string).toDateString() === date.toDateString())
     );
   };
 
@@ -185,7 +191,7 @@ export function useTaskOperations(
       }
       
       // Update task in Supabase
-      await updateTaskInSupabase(updatedTask, progress, completedDate);
+      await updateTaskInSupabase(updatedTask, progress, completedDate instanceof Date ? completedDate : completedDate ? new Date(completedDate) : null);
       
       // Update the task in state
       const updatedTaskWithBothProps: Task = {
@@ -194,7 +200,7 @@ export function useTaskOperations(
         // Make sure we have both camelCase and snake_case properties for compatibility
         assignedTo: updatedTask.assignedTo || updatedTask.assigned_to || '',
         projectId: updatedTask.projectId || updatedTask.project_id || '',
-        completedDate: completedDate ? new Date(completedDate) : undefined,
+        completedDate: completedDate ? new Date(completedDate instanceof Date ? completedDate : completedDate) : undefined,
         dueDate: updatedTask.dueDate || (updatedTask.due_date ? new Date(updatedTask.due_date) : undefined),
         assignedDate: updatedTask.assignedDate || (updatedTask.assigned_date ? new Date(updatedTask.assigned_date) : new Date()),
         // Keep the original properties

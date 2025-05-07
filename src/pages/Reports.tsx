@@ -7,6 +7,7 @@ import { format } from 'date-fns';
 import { Report } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const Reports = () => {
   const { reports, getUserById } = useAppContext();
@@ -84,7 +85,11 @@ const Reports = () => {
                   )}
                   
                   {report.completedTasks.length === 0 && report.completedSubtasks.length === 0 && (
-                    <p className="text-center text-gray-500 py-4">No completed tasks or subtasks in this report</p>
+                    <Alert>
+                      <AlertDescription className="text-center py-2">
+                        No completed tasks or subtasks in this report
+                      </AlertDescription>
+                    </Alert>
                   )}
                 </CardContent>
               </Card>
@@ -92,9 +97,11 @@ const Reports = () => {
           })}
         </div>
       ) : (
-        <div className="text-center py-12 text-gray-500">
-          No reports available
-        </div>
+        <Alert>
+          <AlertDescription className="text-center py-8 text-gray-500">
+            No reports available
+          </AlertDescription>
+        </Alert>
       )}
     </div>
   );

@@ -174,9 +174,9 @@ const TaskCard = ({ task, projectColor, viewMode }: TaskCardProps) => {
             ></div>
           </div>
           
-          {/* Show subtasks if any */}
+          {/* Show subtasks only on hover */}
           {task.subtasks.length > 0 && (
-            <div className="mt-2 space-y-1">
+            <div className="mt-2 space-y-1 hidden group-hover:block">
               <div className="text-xs font-medium text-gray-500">Subtasks:</div>
               <div className="flex flex-wrap gap-1">
                 {task.subtasks.map(subtask => (
@@ -289,9 +289,9 @@ const TaskCard = ({ task, projectColor, viewMode }: TaskCardProps) => {
             </div>
           </div>
           
-          {/* Show subtasks directly in the card */}
+          {/* Subtasks in grid view should only show on hover */}
           {task.subtasks.length > 0 && (
-            <div className="mt-2">
+            <div className="mt-2 hidden group-hover:block">
               <div className="text-xs font-medium text-gray-500 mb-1">Subtasks:</div>
               <div className="flex flex-wrap gap-1">
                 {task.subtasks.map(subtask => (

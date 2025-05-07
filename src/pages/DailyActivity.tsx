@@ -18,6 +18,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Check, Calendar } from 'lucide-react';
 import { Task } from '@/types';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const DailyActivity = () => {
   const { tasks, getUserById, getProjectById } = useAppContext();
@@ -85,9 +86,11 @@ const DailyActivity = () => {
       </div>
       
       {sortedDates.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 rounded-lg">
-          <div className="text-gray-500">No completed tasks for the selected period</div>
-        </div>
+        <Alert>
+          <AlertDescription className="text-center py-6">
+            No completed tasks for the selected period
+          </AlertDescription>
+        </Alert>
       ) : (
         sortedDates.map(dateStr => {
           const tasksForDate = tasksByDate[dateStr];

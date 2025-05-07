@@ -68,13 +68,20 @@ export function useReportOperations(
         
       if (error) throw error;
       
-      // Get all completed tasks and subtasks for the current user from today
+      // Get all completed tasks for the current user from TODAY ONLY
       const todaysCompletedTasks = tasks.filter(t => 
         (t.assignedTo || t.assigned_to) === currentUser.id &&
         t.status === 'completed' &&
         (t.completedDate || t.completed_date) &&
         new Date((t.completedDate || t.completed_date)!).toDateString() === today.toDateString()
       );
+      
+      if (todaysCompletedTasks.length === 0) {
+        toast({
+          title: "No completed tasks",
+          description: "You don't have any completed tasks for today to include in the report."
+        });
+      }
       
       // Add tasks to report_tasks
       if (todaysCompletedTasks.length > 0) {
@@ -88,13 +95,18 @@ export function useReportOperations(
           .insert(taskLinks);
       }
       
-      // Get all subtasks completed today
+      // Get all subtasks completed today only
       const completedSubtasks: SubTask[] = [];
       tasks
         .filter(t => (t.assignedTo || t.assigned_to) === currentUser.id)
         .forEach(t => {
-          const completed = t.subtasks.filter(st => st.status === 'completed');
-          completedSubtasks.push(...completed);
+          // Filter subtasks to only include those completed today
+          const completedToday = t.subtasks.filter(st => {
+            if (st.status !== 'completed' || !st.updatedAt) return false;
+            const completionDate = new Date(st.updatedAt);
+            return completionDate.toDateString() === today.toDateString();
+          });
+          completedSubtasks.push(...completedToday);
         });
       
       // Add subtasks to report_subtasks

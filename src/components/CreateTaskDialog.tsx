@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { 
   Dialog, 
@@ -20,7 +20,8 @@ import {
 } from '@/components/ui/select';
 import { 
   CalendarIcon,
-  Check
+  Check,
+  Users
 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -41,23 +42,65 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [projectId, setProjectId] = useState('');
-  const [projectStage, setProjectStage] = useState('');
-  const [assignedTo, setAssignedTo] = useState('');
+  const [projectStageId, setProjectStageId] = useState('');
+  const [assignedTo, setAssignedTo] = useState<string | string[]>('');
+  const [isMultipleAssignees, setIsMultipleAssignees] = useState(false);
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
   const [priority, setPriority] = useState<'Alta' | 'Media' | 'Baja'>('Media');
   
   const selectedProject = projects.find(p => p.id === projectId);
   const workerUsers = users.filter(u => u.role === 'worker');
   
+  // Get project stages based on selected project
+  const [projectStages, setProjectStages] = useState<{ id: string, name: string }[]>([]);
+  
+  useEffect(() => {
+    if (projectId && selectedProject) {
+      // Fetch project stages for the selected project from Supabase
+      const fetchProjectStages = async () => {
+        const { supabase } = await import('@/integrations/supabase/client');
+        const { data, error } = await supabase
+          .from('project_stages')
+          .select('id, name')
+          .eq('project_id', projectId);
+          
+        if (error) {
+          console.error('Error fetching project stages:', error);
+          return;
+        }
+        
+        if (data && data.length > 0) {
+          setProjectStages(data);
+          // Automatically select the first stage
+          setProjectStageId(data[0].id);
+        } else {
+          setProjectStages([]);
+          setProjectStageId('');
+        }
+      };
+      
+      fetchProjectStages();
+    } else {
+      setProjectStages([]);
+      setProjectStageId('');
+    }
+  }, [projectId, selectedProject]);
+  
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Handle multiple assignees
+    const finalAssignedTo = isMultipleAssignees ? selectedUsers : assignedTo;
     
     addTask({
       title,
       description,
       projectId,
-      projectStage,
-      assignedTo,
+      project_id: projectId,
+      project_stage_id: projectStageId,
+      projectStage: projectStages.find(stage => stage.id === projectStageId)?.name || '',
+      assignedTo: finalAssignedTo,
       status: 'not-started',
       subtasks: [],
       notes: [],
@@ -69,14 +112,25 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
     setTitle('');
     setDescription('');
     setProjectId('');
-    setProjectStage('');
+    setProjectStageId('');
     setAssignedTo('');
+    setSelectedUsers([]);
+    setIsMultipleAssignees(false);
     setDueDate(undefined);
     setPriority('Media');
     onOpenChange(false);
   };
   
-  const isFormValid = title.trim() && projectId && projectStage && assignedTo;
+  const toggleUserSelection = (userId: string) => {
+    setSelectedUsers(prev => 
+      prev.includes(userId) 
+        ? prev.filter(id => id !== userId) 
+        : [...prev, userId]
+    );
+  };
+  
+  const isFormValid = title.trim() && projectId && projectStageId && 
+    (isMultipleAssignees ? selectedUsers.length > 0 : !!assignedTo);
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -127,18 +181,18 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
             <div>
               <label htmlFor="stage" className="text-sm font-medium">Project Stage</label>
               <Select 
-                value={projectStage} 
-                onValueChange={setProjectStage}
-                disabled={!projectId} 
+                value={projectStageId} 
+                onValueChange={setProjectStageId}
+                disabled={!projectId || projectStages.length === 0} 
                 required
               >
                 <SelectTrigger id="stage">
                   <SelectValue placeholder="Select a stage" />
                 </SelectTrigger>
                 <SelectContent>
-                  {selectedProject?.stages.map(stage => (
-                    <SelectItem key={stage} value={stage}>
-                      {stage}
+                  {projectStages.map(stage => (
+                    <SelectItem key={stage.id} value={stage.id}>
+                      {stage.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -146,10 +200,50 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
             </div>
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
-            <div>
+          <div>
+            <div className="flex justify-between items-center mb-2">
               <label htmlFor="assignedTo" className="text-sm font-medium">Assign To</label>
-              <Select value={assignedTo} onValueChange={setAssignedTo} required>
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setIsMultipleAssignees(!isMultipleAssignees)}
+                className="text-xs flex items-center"
+              >
+                <Users className="w-3 h-3 mr-1" />
+                {isMultipleAssignees ? 'Single assignee' : 'Multiple assignees'}
+              </Button>
+            </div>
+            
+            {isMultipleAssignees ? (
+              <div className="border rounded-md p-2 space-y-2">
+                {workerUsers.map(user => (
+                  <div key={user.id} className="flex items-center">
+                    <input 
+                      type="checkbox" 
+                      id={`user-${user.id}`} 
+                      checked={selectedUsers.includes(user.id)}
+                      onChange={() => toggleUserSelection(user.id)}
+                      className="mr-2"
+                    />
+                    <label htmlFor={`user-${user.id}`}>{user.name}</label>
+                  </div>
+                ))}
+                {currentUser && currentUser.role === 'coordinator' && (
+                  <div className="flex items-center">
+                    <input 
+                      type="checkbox" 
+                      id={`user-${currentUser.id}`} 
+                      checked={selectedUsers.includes(currentUser.id)}
+                      onChange={() => toggleUserSelection(currentUser.id)}
+                      className="mr-2"
+                    />
+                    <label htmlFor={`user-${currentUser.id}`}>{currentUser.name} (me)</label>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Select value={assignedTo as string} onValueChange={setAssignedTo} required>
                 <SelectTrigger id="assignedTo">
                   <SelectValue placeholder="Select a user" />
                 </SelectTrigger>
@@ -169,8 +263,10 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            
+            )}
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label htmlFor="priority" className="text-sm font-medium">Priority</label>
               <Select value={priority} onValueChange={(value: any) => setPriority(value)}>
@@ -184,31 +280,31 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
                 </SelectContent>
               </Select>
             </div>
-          </div>
-          
-          <div>
-            <label htmlFor="dueDate" className="text-sm font-medium">Due Date (Optional)</label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  id="dueDate"
-                  variant="outline"
-                  className="w-full justify-start text-left font-normal"
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dueDate ? format(dueDate, 'PPP') : <span>Pick a date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={dueDate}
-                  onSelect={setDueDate}
-                  initialFocus
-                  className="p-3 pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
+            
+            <div>
+              <label htmlFor="dueDate" className="text-sm font-medium">Due Date (Optional)</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="dueDate"
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dueDate ? format(dueDate, 'PPP') : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={dueDate}
+                    onSelect={setDueDate}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
           
           <DialogFooter>

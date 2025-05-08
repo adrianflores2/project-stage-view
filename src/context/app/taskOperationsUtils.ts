@@ -115,14 +115,56 @@ export async function updateTaskInSupabase(
 
 // Delete task in Supabase
 export async function deleteTaskInSupabase(taskId: string) {
-  const { error } = await supabase
-    .from('tasks')
-    .delete()
-    .eq('id', taskId);
+  try {
+    // First delete all subtasks associated with the task
+    const { error: subtasksError } = await supabase
+      .from('subtasks')
+      .delete()
+      .eq('task_id', taskId);
+      
+    if (subtasksError) {
+      console.error("Error deleting subtasks:", subtasksError);
+      throw subtasksError;
+    }
     
-  if (error) throw error;
-  
-  return true;
+    // Delete all notes associated with the task
+    const { error: notesError } = await supabase
+      .from('notes')
+      .delete()
+      .eq('task_id', taskId);
+      
+    if (notesError) {
+      console.error("Error deleting notes:", notesError);
+      throw notesError;
+    }
+    
+    // Delete any report relationships
+    const { error: reportTasksError } = await supabase
+      .from('report_tasks')
+      .delete()
+      .eq('task_id', taskId);
+      
+    if (reportTasksError) {
+      console.error("Error deleting report_tasks:", reportTasksError);
+      // Continue even if there's an error here, as it might not exist
+    }
+    
+    // Finally delete the task itself
+    const { error } = await supabase
+      .from('tasks')
+      .delete()
+      .eq('id', taskId);
+      
+    if (error) {
+      console.error("Error deleting task:", error);
+      throw error;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error in deleteTaskInSupabase:", error);
+    throw error;
+  }
 }
 
 // Reassign task in Supabase

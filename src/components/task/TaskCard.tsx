@@ -8,12 +8,15 @@ interface TaskCardProps {
   task: Task;
   projectColor: string;
   viewMode: 'grid' | 'list';
+  showMinimalInfo?: boolean;
 }
 
-const TaskCard = ({ task, projectColor, viewMode }: TaskCardProps) => {
-  return viewMode === 'list' 
-    ? <TaskListCard task={task} projectColor={projectColor} /> 
-    : <TaskGridCard task={task} projectColor={projectColor} />;
+const TaskCard = ({ task, projectColor, viewMode, showMinimalInfo = false }: TaskCardProps) => {
+  if (viewMode === 'grid') {
+    return <TaskGridCard task={task} projectColor={projectColor} showMinimalInfo={showMinimalInfo} />;
+  } else {
+    return <TaskListCard task={task} projectColor={projectColor} showMinimalInfo={showMinimalInfo} />;
+  }
 };
 
 export default TaskCard;

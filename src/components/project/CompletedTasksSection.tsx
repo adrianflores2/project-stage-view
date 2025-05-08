@@ -55,6 +55,7 @@ const CompletedTasksSection = ({
                     task={task}
                     projectColor={project.color}
                     viewMode={viewMode}
+                    showMinimalInfo={true}  // Add this prop to show minimal info for completed tasks
                   />
                 ))}
               </div>

@@ -3,11 +3,8 @@ import React, { useState } from 'react';
 import { Task } from '@/types';
 import { useAppContext } from '@/context/AppContext';
 import { List, MessageSquare, User } from 'lucide-react';
-import { 
-  Tooltip, 
-  TooltipContent, 
-  TooltipTrigger 
-} from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { format } from 'date-fns';
 import { getBackgroundTint, priorityColors } from './TaskCardStyles';
 import TaskBadge from './TaskBadge';
 import TaskDate from './TaskDate';
@@ -17,15 +14,77 @@ import TaskDetail from '../TaskDetail';
 interface TaskListCardProps {
   task: Task;
   projectColor: string;
+  showMinimalInfo?: boolean;
 }
 
-const TaskListCard = ({ task, projectColor }: TaskListCardProps) => {
+const TaskListCard = ({ task, projectColor, showMinimalInfo = false }: TaskListCardProps) => {
   const { getUserById } = useAppContext();
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   
-  const assignedUser = getUserById(task.assignedTo);
-  const canViewDetails = true; // This was previously calculated in TaskCard
+  const assignedUser = getUserById(task.assignedTo || task.assigned_to || '');
+  const canViewDetails = true;
   
+  // For completed tasks with minimal info
+  if (showMinimalInfo && task.status === 'completed') {
+    return (
+      <>
+        <div 
+          className="bg-white border rounded-md p-2.5 cursor-pointer hover:bg-gray-50 transition-colors group"
+          onClick={() => canViewDetails && setShowDetailDialog(true)}
+          style={{ background: getBackgroundTint(projectColor) }}
+        >
+          <div className="flex justify-between items-start">
+            <div className="flex-1">
+              <h3 className="text-sm font-medium line-clamp-1">{task.title}</h3>
+              
+              <div className="flex items-center text-xs text-gray-500 mt-1">
+                {/* Stage */}
+                <span className="mr-2">{task.projectStage}</span>
+                
+                <div className="mx-2">|</div>
+                
+                {/* Assignee */}
+                <User size={12} className="mr-1" />
+                <span>{assignedUser?.name}</span>
+                
+                <div className="mx-2">|</div>
+                
+                {/* Completed Date */}
+                <span>Completed: {format(new Date(task.completedDate || task.completed_date!), 'MMM d, yyyy')}</span>
+                
+                {task.subtasks.length > 0 && (
+                  <>
+                    <div className="mx-2">|</div>
+                    <List size={12} className="mr-1" />
+                    <span>{task.subtasks.filter(st => st.status === 'completed').length}/{task.subtasks.length}</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          {/* Show subtasks on hover */}
+          {task.subtasks.length > 0 && (
+            <SubtasksList 
+              subtasks={task.subtasks}
+              className="mt-2 space-y-1 hidden group-hover:block" 
+            />
+          )}
+        </div>
+        
+        {showDetailDialog && (
+          <TaskDetail 
+            task={task} 
+            projectColor={projectColor}
+            open={showDetailDialog}
+            onOpenChange={setShowDetailDialog}
+          />
+        )}
+      </>
+    );
+  }
+  
+  // Regular list card display
   return (
     <>
       <div 
@@ -51,7 +110,7 @@ const TaskListCard = ({ task, projectColor }: TaskListCardProps) => {
               
               <div className="mx-2">|</div>
               
-              <TaskDate dueDate={task.dueDate} />
+              <TaskDate dueDate={task.dueDate || task.due_date} />
               
               {task.subtasks.length > 0 && (
                 <>

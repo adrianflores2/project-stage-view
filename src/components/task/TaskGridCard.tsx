@@ -2,119 +2,142 @@
 import React, { useState } from 'react';
 import { Task } from '@/types';
 import { useAppContext } from '@/context/AppContext';
-import { Card } from '@/components/ui/card';
-import { 
-  Tooltip, 
-  TooltipContent, 
-  TooltipTrigger 
-} from '@/components/ui/tooltip';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { List, MessageSquare, User } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { format } from 'date-fns';
 import { getBackgroundTint, priorityColors } from './TaskCardStyles';
 import TaskBadge from './TaskBadge';
-import TaskDate from './TaskDate';
 import TaskProgress from './TaskProgress';
+import TaskDate from './TaskDate';
 import SubtasksList from './SubtasksList';
 import TaskDetail from '../TaskDetail';
 
 interface TaskGridCardProps {
   task: Task;
   projectColor: string;
+  showMinimalInfo?: boolean;
 }
 
-const TaskGridCard = ({ task, projectColor }: TaskGridCardProps) => {
+const TaskGridCard = ({ task, projectColor, showMinimalInfo = false }: TaskGridCardProps) => {
   const { getUserById } = useAppContext();
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   
-  const assignedUser = getUserById(task.assignedTo);
-  const canViewDetails = true; // This was previously calculated in TaskCard
+  const assignedUser = getUserById(task.assignedTo || task.assigned_to || '');
   
-  return (
-    <>
+  // For completed tasks with minimal info
+  if (showMinimalInfo && task.status === 'completed') {
+    return (
       <Card 
-        className="task-card w-full cursor-pointer group hover:shadow-md transition-shadow"
-        style={{ 
-          borderLeft: `4px solid ${projectColor}`,
-          background: getBackgroundTint(projectColor)
-        }} 
-        onClick={() => canViewDetails && setShowDetailDialog(true)}
+        className="cursor-pointer hover:shadow-md transition-shadow"
+        onClick={() => setShowDetailDialog(true)}
+        style={{ background: getBackgroundTint(projectColor) }}
       >
-        <div className="p-3 pb-1">
+        <CardHeader className="p-3 pb-0">
           <div className="flex justify-between items-start">
-            <h3 className="text-sm font-medium line-clamp-2">{task.title}</h3>
-            <div className="flex items-center space-x-1">
-              {task.subtasks.length > 0 && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center text-xs text-gray-500">
-                      <List size={14} className="mr-1" />
-                      <span>{task.subtasks.filter(st => st.status === 'completed').length}/{task.subtasks.length}</span>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Subtasks completed</p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
-              
-              {task.notes.length > 0 && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center text-xs text-gray-500">
-                      <MessageSquare size={14} />
-                      <span className="ml-1">{task.notes.length}</span>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{task.notes.length} note{task.notes.length !== 1 ? 's' : ''}</p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
-            </div>
+            <h3 className="text-sm font-medium line-clamp-1">{task.title}</h3>
           </div>
-          
-          <div className="flex justify-between items-center mt-1">
-            <TaskBadge status={task.status} />
-            <TaskDate dueDate={task.dueDate} />
-          </div>
-        </div>
+        </CardHeader>
         
-        <div className="p-3 pt-1 pb-2">
-          <TaskProgress progress={task.progress} status={task.status} className="mb-3" />
+        <CardContent className="p-3 pt-2 space-y-2">
+          {/* Project Stage */}
+          <div className="text-xs text-gray-500">
+            <span className="font-medium">Stage:</span> {task.projectStage}
+          </div>
           
-          <div className="flex justify-between items-center">
-            <div className="text-xs text-gray-600 flex items-center">
+          {/* Assignee */}
+          {assignedUser && (
+            <div className="text-xs text-gray-500 flex items-center">
               <User size={12} className="mr-1" />
-              {assignedUser?.name}
-              {task.priority && (
-                <span className={`ml-1.5 ${priorityColors[task.priority] || ''}`}>
-                  ({task.priority})
-                </span>
+              <span>{assignedUser.name}</span>
+            </div>
+          )}
+          
+          {/* Completed Date */}
+          {(task.completedDate || task.completed_date) && (
+            <div className="text-xs text-gray-500">
+              <span className="font-medium">Completed:</span> {format(
+                new Date(task.completedDate || task.completed_date!), 
+                'MMM d, yyyy'
               )}
             </div>
-            <div className="text-xs font-medium">
-              {task.progress}%
+          )}
+          
+          {/* Subtasks */}
+          {task.subtasks.length > 0 && (
+            <div className="text-xs flex items-center gap-1">
+              <List size={12} className="mr-1 text-gray-500" />
+              <span className="text-gray-500">{task.subtasks.filter(st => st.status === 'completed').length}/{task.subtasks.length}</span>
+              <SubtasksList subtasks={task.subtasks} className="mt-2" />
             </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  // Regular card display
+  return (
+    <Card 
+      className="cursor-pointer hover:shadow-md transition-shadow"
+      onClick={() => setShowDetailDialog(true)}
+      style={{ background: getBackgroundTint(projectColor) }}
+    >
+      <CardHeader className="p-3 pb-0">
+        <div className="flex justify-between items-start">
+          <h3 className="text-sm font-medium line-clamp-1">{task.title}</h3>
+          <TaskBadge status={task.status} />
+        </div>
+      </CardHeader>
+      
+      <CardContent className="p-3 pt-2 space-y-2">
+        <div className="flex justify-between items-center text-xs">
+          <div className="flex items-center">
+            <User size={12} className="mr-1 text-gray-500" />
+            <span className="text-gray-500">{assignedUser?.name}</span>
           </div>
           
-          {/* Show subtasks only on hover */}
-          {task.subtasks.length > 0 && (
-            <SubtasksList 
-              subtasks={task.subtasks} 
-              className="mt-2 hidden group-hover:block" 
-            />
+          {task.priority && (
+            <span className={`${priorityColors[task.priority] || ''}`}>
+              P: {task.priority}
+            </span>
           )}
         </div>
         
-        {/* Notes and additional details on hover */}
-        <div className="p-0 hidden group-hover:block">
+        <TaskDate dueDate={task.dueDate || task.due_date} />
+        
+        <TaskProgress progress={task.progress} status={task.status} />
+        
+        <div className="flex justify-between items-center text-xs mt-2">
+          {task.subtasks.length > 0 && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center">
+                  <List size={12} className="mr-1 text-gray-500" />
+                  <span className="text-gray-500">{task.subtasks.filter(st => st.status === 'completed').length}/{task.subtasks.length}</span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Subtasks completed</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+          
           {task.notes.length > 0 && (
-            <div className="bg-gray-50 w-full p-3 text-xs text-gray-600 border-t">
-              <div className="font-medium mb-1">Latest note:</div>
-              <p className="line-clamp-2">{task.notes[task.notes.length - 1].content}</p>
-            </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center">
+                  <MessageSquare size={12} className="mr-1 text-gray-500" />
+                  <span className="text-gray-500">{task.notes.length}</span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{task.notes.length} note{task.notes.length !== 1 ? 's' : ''}</p>
+              </TooltipContent>
+            </Tooltip>
           )}
         </div>
-      </Card>
+      </CardContent>
       
       {showDetailDialog && (
         <TaskDetail 
@@ -124,7 +147,7 @@ const TaskGridCard = ({ task, projectColor }: TaskGridCardProps) => {
           onOpenChange={setShowDetailDialog}
         />
       )}
-    </>
+    </Card>
   );
 };
 

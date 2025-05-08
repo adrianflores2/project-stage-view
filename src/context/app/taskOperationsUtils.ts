@@ -113,9 +113,11 @@ export async function updateTaskInSupabase(
   return true;
 }
 
-// Delete task in Supabase - Fixed to handle promises properly
+// Delete task in Supabase - Fixed to properly handle async operations and prevent UI freezing
 export async function deleteTaskInSupabase(taskId: string) {
   try {
+    console.log("Starting to delete task with ID:", taskId);
+    
     // First delete all subtasks associated with the task
     const { error: subtasksError } = await supabase
       .from('subtasks')
@@ -126,6 +128,8 @@ export async function deleteTaskInSupabase(taskId: string) {
       console.error("Error deleting subtasks:", subtasksError);
       throw subtasksError;
     }
+    
+    console.log("Subtasks deleted successfully");
     
     // Delete all notes associated with the task
     const { error: notesError } = await supabase
@@ -138,6 +142,8 @@ export async function deleteTaskInSupabase(taskId: string) {
       throw notesError;
     }
     
+    console.log("Notes deleted successfully");
+    
     // Delete any report relationships
     const { error: reportsError } = await supabase
       .from('report_tasks')
@@ -148,6 +154,8 @@ export async function deleteTaskInSupabase(taskId: string) {
       console.error("Error deleting report relationships:", reportsError);
       throw reportsError;
     }
+    
+    console.log("Report relationships deleted successfully");
     
     // Finally delete the task itself
     const { error: taskError } = await supabase
@@ -160,6 +168,7 @@ export async function deleteTaskInSupabase(taskId: string) {
       throw taskError;
     }
     
+    console.log("Task deleted successfully");
     return true;
   } catch (error) {
     console.error("Error in deleteTaskInSupabase:", error);

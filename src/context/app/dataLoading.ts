@@ -2,7 +2,6 @@
 import { User, Task, Project, Report, SubTask } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
-import { users as initialUsers, tasks as initialTasks, projects as initialProjects } from '@/data/mockData';
 import { 
   processUsersResponse,
   processProjectsResponse, 
@@ -146,7 +145,6 @@ export function useDataLoading(
       setReportsList(reports);
       setDataLoaded(true);
       
-      // Fix: Remove the 'id' property since it's not part of the Toast type
       toast({
         title: "Data loaded successfully",
         description: `Loaded ${users.length} users, ${projects.length} projects, and ${tasks.length} tasks`
@@ -156,16 +154,16 @@ export function useDataLoading(
       console.error("Error loading data:", error);
       toast({
         title: "Data loading error",
-        description: "Failed to load data from the database. Using demo data instead.",
+        description: "Failed to load data from the database. Please try refreshing the page.",
         variant: "destructive"
       });
       
-      // Fall back to mock data
-      setUsersList(initialUsers);
-      setTasksList(initialTasks);
-      setProjectsList(initialProjects);
+      // Initialize with empty arrays instead of mock data
+      setUsersList([]);
+      setTasksList([]);
+      setProjectsList([]);
       setReportsList([]);
-      setDataLoaded(true);
+      setDataLoaded(false); // Set to false so the app knows it needs to try loading again
     }
   };
 

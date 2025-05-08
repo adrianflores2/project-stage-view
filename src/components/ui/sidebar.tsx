@@ -20,9 +20,9 @@ import {
 
 const SIDEBAR_COOKIE_NAME = "sidebar:state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
-const SIDEBAR_WIDTH = "16rem"
+const SIDEBAR_WIDTH = "var(--sidebar-width-expanded)"
 const SIDEBAR_WIDTH_MOBILE = "18rem"
-const SIDEBAR_WIDTH_ICON = "2.5rem" // Changed from 3rem to 2.5rem to make it thinner when collapsed
+const SIDEBAR_WIDTH_ICON = "var(--sidebar-width-collapsed)" // Using CSS variable
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
 
 type SidebarContext = {

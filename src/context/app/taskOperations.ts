@@ -253,10 +253,15 @@ export function useTaskOperations(
         return;
       }
       
-      // Update local state first for immediate visual feedback
+      // Update local state first for immediate feedback
       setTasksList(prev => prev.filter(task => task.id !== taskId));
       
-      // Delete task in Supabase (moved after state update to prevent UI freezing)
+      toast({
+        title: "Deleting task...",
+        description: "Removing task and related data"
+      });
+      
+      // Delete task in Supabase
       await deleteTaskInSupabase(taskId);
       
       toast({
@@ -265,22 +270,36 @@ export function useTaskOperations(
       });
     } catch (error: any) {
       console.error("Error deleting task:", error);
-      // If deletion fails, revert the state change by fetching tasks again
+      
+      // If deletion fails, fetch fresh data to restore state
       toast({
         title: "Failed to delete task",
-        description: error.message,
+        description: error.message || "An unexpected error occurred",
         variant: "destructive"
       });
+      
+      // Reload the tasks list to restore the deleted task in the UI
+      const { data } = await supabase.from('tasks').select('*');
+      if (data) {
+        const updatedTasks = [];
+        for (const task of data) {
+          const taskWithDetails = await fetchTaskDetails(task);
+          if (taskWithDetails) {
+            updatedTasks.push(taskWithDetails);
+          }
+        }
+        setTasksList(updatedTasks);
+      }
     }
   };
   
   const reassignTask = async (taskId: string, newAssigneeId: string) => {
     try {
-      // First check if user is coordinator
-      if (!currentUser || currentUser.role !== 'coordinator') {
+      // First check if user is coordinator or admin
+      if (!currentUser || (currentUser.role !== 'coordinator' && currentUser.role !== 'admin')) {
         toast({
           title: "Permission denied",
-          description: "Only coordinators can reassign tasks",
+          description: "Only coordinators and admins can reassign tasks",
           variant: "destructive"
         });
         return;
@@ -311,7 +330,7 @@ export function useTaskOperations(
       console.error("Error reassigning task:", error);
       toast({
         title: "Failed to reassign task",
-        description: error.message,
+        description: error.message || "An unexpected error occurred",
         variant: "destructive"
       });
     }

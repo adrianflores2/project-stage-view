@@ -1,6 +1,6 @@
+
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { User, Task, Project, SubTask, Report } from '@/types';
-import { users as initialUsers, tasks as initialTasks, projects as initialProjects } from '@/data/mockData';
 import { supabase } from '@/integrations/supabase/client';
 import { AppContextProps } from './app/types';
 import { calculateTaskProgress } from './app/utilityFunctions';
@@ -16,10 +16,11 @@ import { useAuthOperations } from './app/authOperations';
 const AppContext = createContext<AppContextProps | undefined>(undefined);
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
+  // Initialize with empty arrays instead of mock data
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [usersList, setUsersList] = useState<User[]>(initialUsers);
-  const [tasksList, setTasksList] = useState<Task[]>(initialTasks);
-  const [projectsList, setProjectsList] = useState<Project[]>(initialProjects);
+  const [usersList, setUsersList] = useState<User[]>([]);
+  const [tasksList, setTasksList] = useState<Task[]>([]);
+  const [projectsList, setProjectsList] = useState<Project[]>([]);
   const [reportsList, setReportsList] = useState<Report[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);

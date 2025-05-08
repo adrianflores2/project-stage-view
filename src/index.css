@@ -41,6 +41,10 @@
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 217.2 32.6% 25%;
     --sidebar-ring: 224.3 76.3% 48%;
+    
+    /* Sidebar width variables */
+    --sidebar-width-expanded: 16rem;
+    --sidebar-width-collapsed: 3.5rem;
   }
 
   .dark {
@@ -128,6 +132,20 @@
 /* Responsive sidebar adjustments */
 @media (max-width: 768px) {
   .collapsed-sidebar {
-    width: 2.5rem;
+    width: var(--sidebar-width-collapsed);
   }
+}
+
+/* Sidebar width configuration */
+.sidebar-expanded {
+  width: var(--sidebar-width-expanded);
+}
+
+.sidebar-collapsed {
+  width: var(--sidebar-width-collapsed);
+}
+
+/* Sidebar menu button styles in collapsed state */
+.sidebar-collapsed .menu-item-text {
+  display: none;
 }

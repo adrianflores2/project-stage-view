@@ -29,7 +29,7 @@ export function AppSidebar() {
   return (
     <>
       <div className="flex h-screen">
-        <Sidebar className="sidebar-glass">
+        <Sidebar className={`sidebar-glass ${collapsed ? 'sidebar-collapsed' : 'sidebar-expanded'}`}>
           <SidebarHeader className="relative">
             <div className="flex items-center space-x-2 px-2">
               <Kanban className="h-6 w-6 text-white" />
@@ -56,7 +56,7 @@ export function AppSidebar() {
                     className="text-sidebar-foreground hover:text-white"
                   >
                     <Kanban className="h-4 w-4" />
-                    {!collapsed && <span>Task Board</span>}
+                    <span className={collapsed ? "menu-item-text" : ""}>Task Board</span>
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
@@ -69,7 +69,7 @@ export function AppSidebar() {
                     className="text-sidebar-foreground hover:text-white"
                   >
                     <Plus className="h-4 w-4" />
-                    {!collapsed && <span>Projects</span>}
+                    <span className={collapsed ? "menu-item-text" : ""}>Projects</span>
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
@@ -82,7 +82,7 @@ export function AppSidebar() {
                     className="text-sidebar-foreground hover:text-white"
                   >
                     <CalendarIcon className="h-4 w-4" />
-                    {!collapsed && <span>In Progress</span>}
+                    <span className={collapsed ? "menu-item-text" : ""}>In Progress</span>
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
@@ -95,7 +95,7 @@ export function AppSidebar() {
                     className="text-sidebar-foreground hover:text-white"
                   >
                     <FileText className="h-4 w-4" />
-                    {!collapsed && <span>Reports</span>}
+                    <span className={collapsed ? "menu-item-text" : ""}>Reports</span>
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
@@ -108,7 +108,7 @@ export function AppSidebar() {
                     className="text-sidebar-foreground hover:text-white"
                   >
                     <Calendar className="h-4 w-4" />
-                    {!collapsed && <span>Daily Activity</span>}
+                    <span className={collapsed ? "menu-item-text" : ""}>Daily Activity</span>
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
@@ -121,7 +121,7 @@ export function AppSidebar() {
                     className="text-sidebar-foreground hover:text-white"
                   >
                     <Users className="h-4 w-4" />
-                    {!collapsed && <span>User Management</span>}
+                    <span className={collapsed ? "menu-item-text" : ""}>User Management</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}

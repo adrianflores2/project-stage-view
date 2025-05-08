@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import ProjectColumn from './ProjectColumn';
@@ -210,30 +209,12 @@ const ProjectBoard = () => {
                   </div>
                   <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3' : 'space-y-1'}>
                     {getTasksForProject(project.id, true).map(task => (
-                      <div 
-                        key={task.id} 
-                        className="bg-white border rounded-md p-3 flex items-center shadow-sm"
-                        style={{ borderLeftColor: project.color, borderLeftWidth: '3px' }}
-                      >
-                        <Check className="text-status-completed mr-2 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{task.title}</p>
-                          <p className="text-xs text-gray-500">
-                            Completed: {task.completed_date 
-                              ? new Date(task.completed_date).toLocaleDateString() 
-                              : 'Unknown date'}
-                          </p>
-                        </div>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="ml-2 text-gray-500 hover:text-red-500"
-                          onClick={() => handleMarkTaskUndone(task)}
-                          title="Mark as undone"
-                        >
-                          <XCircle size={16} />
-                        </Button>
-                      </div>
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        projectColor={project.color}
+                        viewMode={viewMode}
+                      />
                     ))}
                   </div>
                 </div>

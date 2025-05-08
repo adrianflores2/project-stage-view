@@ -25,20 +25,46 @@ const Index = () => {
     
     // Make sure we enable the realtime feature in Supabase
     const setupRealtime = async () => {
-      // Enable realtime for multiple tables
-      const tables = ['tasks', 'subtasks', 'projects', 'project_stages', 'notes', 'reports'];
-      
-      for (const tableName of tables) {
-        await supabase.rpc('supabase_functions.enable_realtime', {
-          table_name: tableName,
-        });
+      try {
+        // Enable realtime for multiple tables
+        const tables = ['tasks', 'subtasks', 'projects', 'project_stages', 'notes', 'reports'];
+        
+        for (const tableName of tables) {
+          await supabase.rpc('supabase_functions.enable_realtime', {
+            table_name: tableName,
+          });
+        }
+        
+        console.log('Realtime subscriptions enabled for all required tables');
+      } catch (error) {
+        console.error('Error setting up realtime subscriptions:', error);
       }
-      
-      console.log('Realtime subscriptions enabled for all required tables');
     };
     
+    // Add additional listener to ensure data reload when new tasks are created
+    const channel = supabase
+      .channel('public:tasks')
+      .on('postgres_changes', 
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'tasks' 
+        }, 
+        (payload) => {
+          console.log('New task created, reloading data:', payload);
+          // Reload data when new task is created to ensure UI is updated
+          loadInitialData();
+        }
+      )
+      .subscribe();
+    
     setupRealtime();
-  }, [currentUser]);
+    
+    // Cleanup function
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUser, loadInitialData]);
   
   return <ProjectBoard />;
 };

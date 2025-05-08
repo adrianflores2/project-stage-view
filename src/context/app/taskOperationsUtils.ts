@@ -1,3 +1,4 @@
+
 import { Task } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -117,6 +118,17 @@ export async function deleteTaskInSupabase(taskId: string): Promise<boolean> {
   try {
     console.log("Starting to delete task with ID:", taskId);
     
+    // First, fetch all subtask IDs associated with this task
+    const { data: subtaskIds, error: subtaskFetchError } = await supabase
+      .from('subtasks')
+      .select('id')
+      .eq('task_id', taskId);
+      
+    if (subtaskFetchError) {
+      console.error("Error fetching subtask IDs:", subtaskFetchError);
+      throw subtaskFetchError;
+    }
+    
     // Delete all subtasks associated with the task
     const { error: subtasksError } = await supabase
       .from('subtasks')
@@ -141,7 +153,7 @@ export async function deleteTaskInSupabase(taskId: string): Promise<boolean> {
     }
     console.log("Notes deleted successfully");
     
-    // Delete any report relationships
+    // Delete any report tasks relationships
     const { error: reportTasksError } = await supabase
       .from('report_tasks')
       .delete()
@@ -154,24 +166,26 @@ export async function deleteTaskInSupabase(taskId: string): Promise<boolean> {
     }
     console.log("Report task relationships deleted successfully");
     
-    // Delete any report subtasks relationships that might be related to this task's subtasks
-    // This is not strictly necessary as we already deleted the subtasks, but it's good to clean up
-    const { error: reportSubtasksError } = await supabase
-      .from('report_subtasks')
-      .delete()
-      .in('subtask_id', 
-        supabase
-          .from('subtasks')
-          .select('id')
-          .eq('task_id', taskId)
-      );
-    
-    // Ignore "no rows returned" error (PGRST116)
-    if (reportSubtasksError && reportSubtasksError.code !== 'PGRST116') {
-      console.error("Error deleting report subtasks relationships:", reportSubtasksError);
-      throw reportSubtasksError;
+    // If we have subtask IDs, clean up any report subtasks relationships
+    if (subtaskIds && subtaskIds.length > 0) {
+      // Extract just the ID values into a simple array
+      const subtaskIdArray = subtaskIds.map(item => item.id);
+      
+      // Delete report_subtasks entries for these subtask IDs
+      const { error: reportSubtasksError } = await supabase
+        .from('report_subtasks')
+        .delete()
+        .in('subtask_id', subtaskIdArray);
+      
+      // Ignore "no rows returned" error (PGRST116)
+      if (reportSubtasksError && reportSubtasksError.code !== 'PGRST116') {
+        console.error("Error deleting report subtasks relationships:", reportSubtasksError);
+        throw reportSubtasksError;
+      }
+      console.log("Report subtask relationships deleted successfully");
+    } else {
+      console.log("No subtasks to clean up relationships for");
     }
-    console.log("Report subtask relationships deleted (if any) successfully");
     
     // Finally delete the task itself
     const { error: taskError } = await supabase

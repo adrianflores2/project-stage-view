@@ -124,7 +124,7 @@ export function useSubtaskOperations(
     }
   };
   
-  // Modified to not return a Promise, just perform the operation directly
+  // Delete subtask without confirmation dialog
   const deleteSubtask = async (taskId: string, subtaskId: string) => {
     try {
       // Delete subtask in Supabase first

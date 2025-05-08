@@ -37,7 +37,7 @@ export const getSubtaskStatusStyle = (status: string) => {
 };
 
 // Calculate days remaining until due date
-export const getDaysRemaining = (dueDate?: string) => {
+export const getDaysRemaining = (dueDate?: string | Date) => {
   if (!dueDate) return null;
   const today = new Date();
   const due = new Date(dueDate);

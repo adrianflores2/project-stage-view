@@ -5,12 +5,15 @@ import { Clock } from 'lucide-react';
 import { getDaysRemaining, getDueColor } from './TaskCardStyles';
 
 interface TaskDateProps {
-  dueDate?: string;
+  dueDate?: string | Date;
 }
 
 const TaskDate = ({ dueDate }: TaskDateProps) => {
-  const formattedDate = dueDate ? format(new Date(dueDate), 'dd MMM') : 'No due date';
-  const daysRemaining = getDaysRemaining(dueDate);
+  // Convert to string format if it's a Date object
+  const dueDateString = dueDate ? (dueDate instanceof Date ? dueDate.toISOString() : dueDate) : undefined;
+  
+  const formattedDate = dueDateString ? format(new Date(dueDateString), 'dd MMM') : 'No due date';
+  const daysRemaining = getDaysRemaining(dueDateString);
   const dueColor = getDueColor(daysRemaining);
   
   return (

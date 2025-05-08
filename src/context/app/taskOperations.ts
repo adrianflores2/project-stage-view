@@ -147,7 +147,7 @@ export function useTaskOperations(
       // Check if we're creating multiple tasks for different users
       const assignees = Array.isArray(task.assignedTo) ? task.assignedTo : [task.assignedTo];
       
-      const createdTasks = [];
+      const createdTasks: Task[] = [];
       
       for (const assignee of assignees) {
         console.log("Creating task with values:", {

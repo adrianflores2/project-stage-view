@@ -126,7 +126,13 @@ export function useSubtaskOperations(
   
   const deleteSubtask = async (taskId: string, subtaskId: string) => {
     try {
-      // Delete subtask in Supabase
+      // Show a loading toast
+      toast({
+        title: "Deleting subtask...",
+        description: "Removing subtask from task"
+      });
+      
+      // Delete subtask in Supabase first
       const { error } = await supabase
         .from('subtasks')
         .delete()
@@ -137,7 +143,7 @@ export function useSubtaskOperations(
         throw error;
       }
       
-      // Update local state immediately
+      // Only update state after successful database operation
       const updatedTasks = tasks.map(task => {
         if (task.id === taskId) {
           // Remove the subtask
@@ -167,9 +173,11 @@ export function useSubtaskOperations(
       console.error("Error deleting subtask:", error);
       toast({
         title: "Failed to delete subtask",
-        description: error.message,
+        description: error.message || "An unexpected error occurred",
         variant: "destructive"
       });
+      
+      // Don't update the UI if the database operation fails
     }
   };
   

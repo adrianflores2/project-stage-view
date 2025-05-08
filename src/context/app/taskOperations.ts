@@ -1,4 +1,3 @@
-
 import { Task, SubTask } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
@@ -297,49 +296,25 @@ export function useTaskOperations(
         return;
       }
       
-      // Update local state first for immediate feedback
-      setTasksList(prev => prev.filter(task => task.id !== taskId));
-      
+      // Show a loading toast
       toast({
         title: "Deleting task...",
         description: "Removing task and related data"
       });
       
-      // Delete task in Supabase (using a non-blocking approach)
-      deleteTaskInSupabase(taskId)
-        .then(() => {
-          toast({
-            title: "Task deleted",
-            description: "The task has been removed successfully"
-          });
-        })
-        .catch((error) => {
-          console.error("Error in deleteTaskInSupabase:", error);
-          
-          // If deletion fails, fetch fresh data to restore state
-          toast({
-            title: "Failed to delete task",
-            description: error.message || "An unexpected error occurred",
-            variant: "destructive"
-          });
-          
-          // Reload the tasks list to restore the UI state
-          supabase.from('tasks').select('*').then(async ({ data }) => {
-            if (data) {
-              const updatedTasks = [];
-              for (const task of data) {
-                const taskWithDetails = await fetchTaskDetails(task);
-                if (taskWithDetails) {
-                  updatedTasks.push(taskWithDetails);
-                }
-              }
-              setTasksList(updatedTasks);
-            }
-          });
-        });
+      // Complete the database operation first
+      await deleteTaskInSupabase(taskId);
       
+      // Only update state after successful database operation
+      setTasksList(prev => prev.filter(task => task.id !== taskId));
+      
+      // Show success toast
+      toast({
+        title: "Task deleted",
+        description: "The task has been removed successfully"
+      });
     } catch (error: any) {
-      console.error("Error starting task deletion:", error);
+      console.error("Error deleting task:", error);
       toast({
         title: "Failed to delete task",
         description: error.message || "An unexpected error occurred",

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { useAppContext } from '@/context/AppContext';
@@ -21,10 +22,11 @@ export function AppSidebar() {
   const location = useLocation();
   const { currentUser, logout, tasks, deleteTask } = useAppContext();
   const [showUserManagement, setShowUserManagement] = useState(false);
-  const { state, setOpen } = useSidebar();
+  const { open, setOpen } = useSidebar();
   const { toast } = useToast();
   
-  const collapsed = state === 'collapsed';
+  // Convert open boolean to collapsed state string
+  const collapsed = !open;
 
   // Admins and coordinators can manage users
   const canManageUsers = currentUser?.role === 'coordinator' || currentUser?.role === 'admin';
@@ -84,7 +86,7 @@ export function AppSidebar() {
   };
   
   const toggleSidebar = () => {
-    setOpen(!collapsed);
+    setOpen(!open);
   };
 
   return (

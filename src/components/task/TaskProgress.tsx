@@ -1,10 +1,11 @@
 
 import React from 'react';
 import { Progress } from '@/components/ui/progress';
+import { TaskStatus } from '@/types';
 
 interface TaskProgressProps {
   progress: number;
-  status: string;
+  status: TaskStatus;
   showLabel?: boolean;
   className?: string;
 }

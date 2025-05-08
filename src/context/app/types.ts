@@ -1,3 +1,4 @@
+
 import { User, Task, Project, SubTask, Note, Report } from '@/types';
 
 export interface AppContextProps {
@@ -23,6 +24,7 @@ export interface AppContextProps {
   reassignTask: (taskId: string, newAssigneeId: string) => Promise<void>;
   addSubtask: (taskId: string, subtask: Omit<SubTask, 'id'>) => Promise<void>;
   updateSubtask: (taskId: string, subtask: SubTask) => Promise<void>;
+  deleteSubtask: (taskId: string, subtaskId: string) => Promise<void>;
   addNote: (taskId: string, content: string) => Promise<void>;
   addProject: (project: Omit<Project, 'id'>) => Promise<void>;
   updateProject: (project: Project) => Promise<void>;
@@ -32,5 +34,5 @@ export interface AppContextProps {
   generateReport: (taskId: string, message: string) => Promise<void>;
   getReports: () => Report[];
   loadInitialData: () => Promise<void>;
-  dataLoaded: boolean; // Added this property to fix the error
+  dataLoaded: boolean;
 }

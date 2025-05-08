@@ -12,6 +12,15 @@ export function useSubtaskOperations(
   
   const addSubtask = async (taskId: string, subtask: Omit<SubTask, 'id'>) => {
     try {
+      console.log("Adding subtask for task ID:", taskId);
+      
+      // Verify that the task exists first
+      const taskExists = tasks.some(task => task.id === taskId);
+      
+      if (!taskExists) {
+        throw new Error(`Task with ID ${taskId} not found`);
+      }
+      
       // Insert subtask in Supabase
       const { data: newSubtask, error } = await supabase
         .from('subtasks')
@@ -23,7 +32,16 @@ export function useSubtaskOperations(
         .select()
         .single();
         
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase error adding subtask:", error);
+        throw error;
+      }
+      
+      if (!newSubtask) {
+        throw new Error("Failed to create subtask - no data returned");
+      }
+      
+      console.log("Subtask created successfully:", newSubtask);
       
       // Update task progress
       const taskToUpdate = tasks.find(task => task.id === taskId);
@@ -34,6 +52,7 @@ export function useSubtaskOperations(
         };
         
         const progress = calculateTaskProgress(updatedTask);
+        console.log("Updating task progress to:", progress);
         
         // Update progress in database
         await supabase
@@ -59,6 +78,8 @@ export function useSubtaskOperations(
         title: "Subtask added",
         description: "A new subtask has been added."
       });
+      
+      return newSubtask;
     } catch (error: any) {
       console.error("Error adding subtask:", error);
       toast({
@@ -66,6 +87,7 @@ export function useSubtaskOperations(
         description: error.message,
         variant: "destructive"
       });
+      throw error;
     }
   };
 
@@ -148,5 +170,67 @@ export function useSubtaskOperations(
     }
   };
 
-  return { addSubtask, updateSubtask };
+  const deleteSubtask = async (taskId: string, subtaskId: string) => {
+    try {
+      console.log("Deleting subtask:", subtaskId, "from task:", taskId);
+      
+      // Delete subtask in Supabase
+      const { error } = await supabase
+        .from('subtasks')
+        .delete()
+        .eq('id', subtaskId);
+        
+      if (error) {
+        console.error("Supabase error deleting subtask:", error);
+        throw error;
+      }
+      
+      // Update local state
+      setTasksList(prev => 
+        prev.map(task => {
+          if (task.id === taskId) {
+            // Remove the subtask from the array
+            const updatedSubtasks = task.subtasks.filter(
+              subtask => subtask.id !== subtaskId
+            );
+            
+            const updatedTask = {
+              ...task,
+              subtasks: updatedSubtasks
+            };
+            
+            // Recalculate progress
+            const progress = calculateTaskProgress(updatedTask);
+            
+            // Update progress in database
+            supabase
+              .from('tasks')
+              .update({ progress })
+              .eq('id', taskId)
+              .then();
+              
+            return {
+              ...updatedTask,
+              progress
+            };
+          }
+          return task;
+        })
+      );
+      
+      toast({
+        title: "Subtask deleted",
+        description: "The subtask has been removed."
+      });
+    } catch (error: any) {
+      console.error("Error deleting subtask:", error);
+      toast({
+        title: "Failed to delete subtask",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  return { addSubtask, updateSubtask, deleteSubtask };
 }

@@ -54,7 +54,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     currentUser
   );
   
-  const { addSubtask, updateSubtask } = useSubtaskOperations(
+  const { addSubtask, updateSubtask, deleteSubtask } = useSubtaskOperations(
     tasksList, 
     setTasksList, 
     calculateTaskProgress
@@ -130,6 +130,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       reassignTask,
       addSubtask,
       updateSubtask,
+      deleteSubtask,
       addNote,
       addProject,
       updateProject,

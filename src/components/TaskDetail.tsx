@@ -63,6 +63,7 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
     reassignTask,
     addSubtask,
     updateSubtask,
+    deleteSubtask,
     addNote,
     generateReport
   } = useAppContext();
@@ -72,6 +73,7 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
   const [editingTask, setEditingTask] = useState<Task>({...task});
   const [reportMessage, setReportMessage] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmDeleteSubtask, setConfirmDeleteSubtask] = useState<string | null>(null);
   const [reassignDialogOpen, setReassignDialogOpen] = useState(false);
   const [newAssigneeId, setNewAssigneeId] = useState('');
   
@@ -86,6 +88,7 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
   const isAssignedToCurrentUser = currentUser?.id === (task.assignedTo || task.assigned_to);
   const canDeleteTask = currentUser?.role === 'coordinator';
   const canReassignTask = currentUser?.role === 'coordinator';
+  const canDeleteSubtask = currentUser?.role === 'coordinator' || isAssignedToCurrentUser;
   
   // Allow workers to generate report if they're assigned to this task
   const canGenerateReport = currentUser?.role === 'worker' && isAssignedToCurrentUser;
@@ -113,6 +116,17 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
     const subtask = task.subtasks.find(st => st.id === subtaskId);
     if (subtask) {
       updateSubtask(task.id, { ...subtask, status });
+    }
+  };
+  
+  const handleSubtaskDelete = (subtaskId: string) => {
+    setConfirmDeleteSubtask(subtaskId);
+  };
+  
+  const confirmSubtaskDelete = async () => {
+    if (confirmDeleteSubtask) {
+      await deleteSubtask(task.id, confirmDeleteSubtask);
+      setConfirmDeleteSubtask(null);
     }
   };
   
@@ -330,35 +344,48 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
                     <div key={subtask.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
                       <div className="flex-1">{subtask.title}</div>
                       
-                      {canAddSubtask && (
-                        <Select 
-                          value={subtask.status} 
-                          onValueChange={(value) => handleSubtaskStatusChange(
-                            subtask.id, 
-                            value as SubTask['status']
-                          )}
-                        >
-                          <SelectTrigger className="w-[140px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="not-started">Not Started</SelectItem>
-                            <SelectItem value="in-progress">In Progress</SelectItem>
-                            <SelectItem value="completed">Completed</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      )}
-                      
-                      {!canAddSubtask && (
-                        <Badge className={`
-                          text-white
-                          ${subtask.status === 'not-started' ? 'bg-status-notStarted' : ''}
-                          ${subtask.status === 'in-progress' ? 'bg-status-inProgress' : ''}
-                          ${subtask.status === 'completed' ? 'bg-status-completed' : ''}
-                        `}>
-                          {subtask.status.replace(/-/g, ' ')}
-                        </Badge>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {canAddSubtask && (
+                          <Select 
+                            value={subtask.status} 
+                            onValueChange={(value) => handleSubtaskStatusChange(
+                              subtask.id, 
+                              value as SubTask['status']
+                            )}
+                          >
+                            <SelectTrigger className="w-[140px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="not-started">Not Started</SelectItem>
+                              <SelectItem value="in-progress">In Progress</SelectItem>
+                              <SelectItem value="completed">Completed</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                        
+                        {!canAddSubtask && (
+                          <Badge className={`
+                            text-white
+                            ${subtask.status === 'not-started' ? 'bg-status-notStarted' : ''}
+                            ${subtask.status === 'in-progress' ? 'bg-status-inProgress' : ''}
+                            ${subtask.status === 'completed' ? 'bg-status-completed' : ''}
+                          `}>
+                            {subtask.status.replace(/-/g, ' ')}
+                          </Badge>
+                        )}
+                        
+                        {canDeleteSubtask && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleSubtaskDelete(subtask.id)}
+                            className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash size={16} />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -540,7 +567,7 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
         </DialogContent>
       </Dialog>
       
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Task Confirmation Dialog */}
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -552,6 +579,24 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteTask} className="bg-destructive text-destructive-foreground">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      {/* Delete Subtask Confirmation Dialog */}
+      <AlertDialog open={!!confirmDeleteSubtask} onOpenChange={() => setConfirmDeleteSubtask(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete subtask?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the selected subtask. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmSubtaskDelete} className="bg-destructive text-destructive-foreground">
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

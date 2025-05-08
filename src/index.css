@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -129,28 +128,10 @@
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
-/* Responsive sidebar adjustments */
+/* Remove the unused margin and transition properties that cause layout issues */
 .main-content {
-  transition: margin-left 0.2s ease-in-out;
   width: 100%;
-}
-
-.main-content-expanded {
-  margin-left: var(--sidebar-width-expanded);
-  width: calc(100% - var(--sidebar-width-expanded));
-}
-
-.main-content-collapsed {
-  margin-left: var(--sidebar-width-collapsed);
-  width: calc(100% - var(--sidebar-width-collapsed));
-}
-
-.sidebar-expanded {
-  width: var(--sidebar-width-expanded);
-}
-
-.sidebar-collapsed {
-  width: var(--sidebar-width-collapsed);
+  height: 100%;
 }
 
 /* Sidebar menu button styles in collapsed state */

@@ -28,9 +28,9 @@ function MainContentWithAuth() {
 
   return (
     <SidebarProvider>
-      <div className="flex h-screen w-full overflow-hidden">
+      <div className="flex h-screen w-full">
         <AppSidebar />
-        <div id="main-content" className="main-content main-content-expanded">
+        <div id="main-content" className="flex-1 overflow-auto">
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/projects" element={<Projects />} />

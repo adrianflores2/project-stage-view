@@ -150,7 +150,7 @@ export async function deleteTaskInSupabase(taskId: string) {
       .delete()
       .eq('task_id', taskId);
       
-    if (reportsError) {
+    if (reportsError && reportsError.code !== 'PGRST116') { // Ignore "no rows returned" error
       console.error("Error deleting report relationships:", reportsError);
       throw reportsError;
     }

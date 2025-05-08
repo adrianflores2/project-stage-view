@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -44,7 +43,7 @@
     
     /* Sidebar width variables */
     --sidebar-width-expanded: 16rem;
-    --sidebar-width-collapsed: 3.5rem;
+    --sidebar-width-collapsed: 3rem;
   }
 
   .dark {
@@ -130,13 +129,18 @@
 }
 
 /* Responsive sidebar adjustments */
-@media (max-width: 768px) {
-  .collapsed-sidebar {
-    width: var(--sidebar-width-collapsed);
-  }
+.main-content {
+  transition: margin-left 0.2s ease-in-out;
 }
 
-/* Sidebar width configuration */
+.main-content-expanded {
+  margin-left: var(--sidebar-width-expanded);
+}
+
+.main-content-collapsed {
+  margin-left: var(--sidebar-width-collapsed);
+}
+
 .sidebar-expanded {
   width: var(--sidebar-width-expanded);
 }
@@ -148,4 +152,9 @@
 /* Sidebar menu button styles in collapsed state */
 .sidebar-collapsed .menu-item-text {
   display: none;
+}
+
+/* Fix for collapsed sidebar icon alignment */
+.sidebar-collapsed .collapse-icon-container {
+  right: 0.35rem;
 }

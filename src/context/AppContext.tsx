@@ -16,7 +16,7 @@ import { useAuthOperations } from './app/authOperations';
 const AppContext = createContext<AppContextProps | undefined>(undefined);
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-  // Initialize with empty arrays instead of mock data
+  // Initialize with empty arrays
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [usersList, setUsersList] = useState<User[]>([]);
   const [tasksList, setTasksList] = useState<Task[]>([]);

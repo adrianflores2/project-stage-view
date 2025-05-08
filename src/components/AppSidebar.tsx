@@ -13,18 +13,84 @@ import {
   SidebarTrigger
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { Calendar, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Kanban, Lock, Plus, User, Users, FileText } from 'lucide-react';
+import { Calendar, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Kanban, Lock, Plus, User, Users, FileText, Trash2 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import UserManagement from './UserManagement';
+import { useToast } from "./ui/use-toast";
 
 export function AppSidebar() {
   const location = useLocation();
-  const { currentUser, logout } = useAppContext();
+  const { currentUser, logout, tasks, updateTask, deleteTask } = useAppContext();
   const [showUserManagement, setShowUserManagement] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const { toast } = useToast();
 
   // Admins and coordinators can manage users
   const canManageUsers = currentUser?.role === 'coordinator' || currentUser?.role === 'admin';
+  const isAdmin = currentUser?.role === 'admin';
+
+  const handleCleanupTasks = async () => {
+    if (!isAdmin) return;
+    
+    // Find completed tasks older than 48 hours
+    const now = new Date();
+    const tasksToDelete = tasks.filter(task => {
+      if (task.status !== 'completed' || !task.completedDate) return false;
+      
+      // Convert completedDate to Date object if it's a string
+      const completedDate = task.completedDate instanceof Date 
+        ? task.completedDate 
+        : new Date(task.completedDate);
+      
+      // Calculate time difference in milliseconds
+      const timeDiff = now.getTime() - completedDate.getTime();
+      const hoursDiff = timeDiff / (1000 * 60 * 60);
+      
+      return hoursDiff >= 48;
+    });
+    
+    if (tasksToDelete.length === 0) {
+      toast({
+        title: "No tasks to clean up",
+        description: "There are no completed tasks older than 48 hours.",
+      });
+      return;
+    }
+    
+    toast({
+      title: "Cleaning up tasks",
+      description: `Deleting ${tasksToDelete.length} completed tasks...`
+    });
+    
+    // Delete each task
+    try {
+      for (const task of tasksToDelete) {
+        await deleteTask(task.id);
+      }
+      
+      toast({
+        title: "Tasks deleted",
+        description: `Successfully deleted ${tasksToDelete.length} completed tasks.`
+      });
+    } catch (error: any) {
+      console.error("Error deleting tasks:", error);
+      toast({
+        title: "Error deleting tasks",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // Apply the appropriate class to the main content when sidebar state changes
+  useState(() => {
+    const mainContent = document.getElementById('main-content');
+    if (mainContent) {
+      mainContent.className = collapsed 
+        ? 'main-content main-content-collapsed'
+        : 'main-content main-content-expanded';
+    }
+  }, [collapsed]);
 
   return (
     <>
@@ -38,8 +104,17 @@ export function AppSidebar() {
             <Button
               variant="ghost"
               size="icon"
-              className="absolute right-2 top-2 text-white hover:bg-sidebar-accent/50 hover:text-white"
-              onClick={() => setCollapsed(!collapsed)}
+              className={`absolute top-2 collapse-icon-container ${collapsed ? 'right-0.5' : 'right-2'}`}
+              onClick={() => {
+                setCollapsed(!collapsed);
+                // Update main content class when sidebar state changes
+                const mainContent = document.getElementById('main-content');
+                if (mainContent) {
+                  mainContent.className = !collapsed 
+                    ? 'main-content main-content-collapsed'
+                    : 'main-content main-content-expanded';
+                }
+              }}
               title={collapsed ? "Expand" : "Collapse"}
             >
               {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
@@ -122,6 +197,19 @@ export function AppSidebar() {
                   >
                     <Users className="h-4 w-4" />
                     <span className={collapsed ? "menu-item-text" : ""}>User Management</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              
+              {isAdmin && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={handleCleanupTasks}
+                    tooltip="Cleanup Old Tasks"
+                    className="text-sidebar-foreground hover:text-white"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span className={collapsed ? "menu-item-text" : ""}>Cleanup Tasks</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}

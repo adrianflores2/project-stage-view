@@ -1,115 +1,56 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { AppProvider, useAppContext } from "./context/AppContext";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { AppSidebar } from "./components/AppSidebar";
-import Index from "./pages/Index";
-import Projects from "./pages/Projects";
-import InProgress from "./pages/InProgress";
-import Reports from "./pages/Reports";
-import DailyActivity from "./pages/DailyActivity";
-import Login from "./pages/Login";
-import NotFound from "./pages/NotFound";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { Route, Routes } from 'react-router-dom';
+import { ThemeProvider } from '@/components/theme-provider';
+import { AppProvider } from '@/context/AppContext';
+import { AppSidebar } from '@/components/AppSidebar';
 
-// Create a QueryClient with default options
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-      staleTime: 5 * 60 * 1000, // 5 minutes
-    },
-  },
-});
+// Pages
+import Login from '@/pages/Login';
+import Index from '@/pages/Index';
+import NotFound from '@/pages/NotFound';
+import Projects from '@/pages/Projects';
+import InProgress from '@/pages/InProgress';
+import Reports from '@/pages/Reports';
+import DailyActivity from '@/pages/DailyActivity';
 
-// Protected route component
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+// Import Toast
+import { Toaster } from '@/components/ui/toaster';
+import { useState, useContext, useEffect } from 'react';
+import { useAppContext } from './context/AppContext';
+
+function MainContent() {
   const { isAuthenticated } = useAppContext();
-  const location = useLocation();
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Login />;
   }
 
-  return <>{children}</>;
-};
-
-// Layout component that includes the sidebar
-const AppLayout = ({ children }: { children: React.ReactNode }) => {
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
-        <AppSidebar />
-        <main className="flex-1 overflow-auto rounded-tl-lg rounded-bl-lg shadow-sm">
-          {children}
-        </main>
-      </div>
-    </SidebarProvider>
+    <div id="main-content" className="main-content main-content-expanded">
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/projects" element={<Projects />} />
+        <Route path="/in-progress" element={<InProgress />} />
+        <Route path="/reports" element={<Reports />} />
+        <Route path="/daily-activity" element={<DailyActivity />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </div>
   );
-};
+}
 
-const AppRoutes = () => {
+function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      
-      {/* Protected routes */}
-      <Route path="/" element={
-        <ProtectedRoute>
-          <AppLayout>
-            <Index />
-          </AppLayout>
-        </ProtectedRoute>
-      } />
-      <Route path="/projects" element={
-        <ProtectedRoute>
-          <AppLayout>
-            <Projects />
-          </AppLayout>
-        </ProtectedRoute>
-      } />
-      <Route path="/in-progress" element={
-        <ProtectedRoute>
-          <AppLayout>
-            <InProgress />
-          </AppLayout>
-        </ProtectedRoute>
-      } />
-      <Route path="/reports" element={
-        <ProtectedRoute>
-          <AppLayout>
-            <Reports />
-          </AppLayout>
-        </ProtectedRoute>
-      } />
-      <Route path="/daily-activity" element={
-        <ProtectedRoute>
-          <AppLayout>
-            <DailyActivity />
-          </AppLayout>
-        </ProtectedRoute>
-      } />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
-  );
-};
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AppProvider>
-      <TooltipProvider>
+    <ThemeProvider defaultTheme="light" storageKey="task-manager-theme">
+      <AppProvider>
+        <div className="flex h-screen w-full overflow-hidden">
+          <AppSidebar />
+          <MainContent />
+        </div>
         <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
-      </TooltipProvider>
-    </AppProvider>
-  </QueryClientProvider>
-);
+      </AppProvider>
+    </ThemeProvider>
+  );
+}
 
 export default App;

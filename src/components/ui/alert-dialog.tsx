@@ -45,7 +45,13 @@ const AlertDialogContent = React.forwardRef<
     >
       {children}
       {!hideCloseButton && (
-        <AlertDialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+        <AlertDialogClose 
+          className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+          onClick={(e) => {
+            // Stop propagation to prevent parent dialogs from closing
+            e.stopPropagation();
+          }}
+        >
           <X className="h-4 w-4" aria-hidden="true" />
           <span className="sr-only">Close</span>
         </AlertDialogClose>
@@ -115,6 +121,14 @@ const AlertDialogAction = React.forwardRef<
   <AlertDialogPrimitive.Action
     ref={ref}
     className={cn(buttonVariants(), className)}
+    onClick={(e) => {
+      // If there's an onClick handler in the props, call it
+      if (props.onClick) {
+        props.onClick(e);
+      }
+      // Stop propagation to prevent parent dialogs from being affected
+      e.stopPropagation();
+    }}
     {...props}
   />
 ))
@@ -131,6 +145,14 @@ const AlertDialogCancel = React.forwardRef<
       "mt-2 sm:mt-0",
       className
     )}
+    onClick={(e) => {
+      // If there's an onClick handler in the props, call it
+      if (props.onClick) {
+        props.onClick(e);
+      }
+      // Stop propagation to prevent parent dialogs from being affected
+      e.stopPropagation();
+    }}
     {...props}
   />
 ))

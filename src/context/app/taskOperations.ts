@@ -1,3 +1,4 @@
+
 import { Task, SubTask } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
@@ -302,17 +303,22 @@ export function useTaskOperations(
         description: "Removing task and related data"
       });
       
-      // Complete the database operation first
-      await deleteTaskInSupabase(taskId);
+      // IMPORTANT: First complete the database operation
+      const deleteSuccessful = await deleteTaskInSupabase(taskId);
       
       // Only update state after successful database operation
-      setTasksList(prev => prev.filter(task => task.id !== taskId));
-      
-      // Show success toast
-      toast({
-        title: "Task deleted",
-        description: "The task has been removed successfully"
-      });
+      if (deleteSuccessful) {
+        setTasksList(prev => prev.filter(task => task.id !== taskId));
+        
+        // Show success toast
+        toast({
+          title: "Task deleted",
+          description: "The task has been removed successfully"
+        });
+      } else {
+        // This should never happen as deleteTaskInSupabase should throw an error if deletion fails
+        throw new Error("Task deletion failed");
+      }
     } catch (error: any) {
       console.error("Error deleting task:", error);
       toast({
@@ -320,6 +326,7 @@ export function useTaskOperations(
         description: error.message || "An unexpected error occurred",
         variant: "destructive"
       });
+      // Don't update the UI if the database operation fails
     }
   };
   

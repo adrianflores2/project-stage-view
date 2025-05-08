@@ -132,6 +132,7 @@ export function useSubtaskOperations(
         description: "Removing subtask from task"
       });
       
+      // IMPORTANT: First complete the database operation
       // Delete subtask in Supabase first
       const { error } = await supabase
         .from('subtasks')
@@ -163,8 +164,10 @@ export function useSubtaskOperations(
         return task;
       });
       
+      // Update the state with the new task list
       setTasksList(updatedTasks);
       
+      // Show success toast
       toast({
         title: "Subtask deleted",
         description: "Subtask has been removed successfully"

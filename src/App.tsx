@@ -40,15 +40,21 @@ function MainContent() {
 }
 
 function App() {
+  const { isAuthenticated } = useAppContext();
+  
   return (
     <ThemeProvider defaultTheme="light" storageKey="task-manager-theme">
       <AppProvider>
-        <SidebarProvider>
-          <div className="flex h-screen w-full overflow-hidden">
-            <AppSidebar />
-            <MainContent />
-          </div>
-        </SidebarProvider>
+        {isAuthenticated ? (
+          <SidebarProvider>
+            <div className="flex h-screen w-full overflow-hidden">
+              <AppSidebar />
+              <MainContent />
+            </div>
+          </SidebarProvider>
+        ) : (
+          <MainContent />
+        )}
         <Toaster />
       </AppProvider>
     </ThemeProvider>

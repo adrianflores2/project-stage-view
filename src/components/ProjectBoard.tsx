@@ -22,6 +22,7 @@ import {
 import { User, Filter, Plus, Kanban, Check, Trash, XCircle } from 'lucide-react';
 import CreateTaskDialog from './CreateTaskDialog';
 import { Task, TaskStatus } from '@/types';
+import TaskCard from './TaskCard';
 
 const ProjectBoard = () => {
   const { currentUser, projects, users, getFilteredTasks, deleteProject, updateTask } = useAppContext();

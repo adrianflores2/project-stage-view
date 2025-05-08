@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { useAppContext } from '@/context/AppContext';
 import { 
@@ -82,8 +82,8 @@ export function AppSidebar() {
     }
   };
   
-  // Apply the appropriate class to the main content when sidebar state changes
-  useState(() => {
+  // Update main content when sidebar state changes
+  useEffect(() => {
     const mainContent = document.getElementById('main-content');
     if (mainContent) {
       mainContent.className = collapsed 
@@ -253,3 +253,4 @@ export function AppSidebar() {
     </>
   );
 }
+

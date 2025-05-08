@@ -15,7 +15,6 @@ import DailyActivity from '@/pages/DailyActivity';
 
 // Import Toast
 import { Toaster } from '@/components/ui/toaster';
-import { useState, useContext, useEffect } from 'react';
 import { useAppContext } from './context/AppContext';
 
 function MainContent() {

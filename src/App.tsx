@@ -18,7 +18,8 @@ import DailyActivity from '@/pages/DailyActivity';
 import { Toaster } from '@/components/ui/toaster';
 import { useAppContext } from './context/AppContext';
 
-function MainContent() {
+// MainContent component that uses the AppContext
+function MainContentWithAuth() {
   const { isAuthenticated } = useAppContext();
 
   if (!isAuthenticated) {
@@ -26,35 +27,30 @@ function MainContent() {
   }
 
   return (
-    <div id="main-content" className="main-content main-content-expanded">
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/projects" element={<Projects />} />
-        <Route path="/in-progress" element={<InProgress />} />
-        <Route path="/reports" element={<Reports />} />
-        <Route path="/daily-activity" element={<DailyActivity />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </div>
+    <SidebarProvider>
+      <div className="flex h-screen w-full overflow-hidden">
+        <AppSidebar />
+        <div id="main-content" className="main-content main-content-expanded">
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/projects" element={<Projects />} />
+            <Route path="/in-progress" element={<InProgress />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/daily-activity" element={<DailyActivity />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </div>
+      </div>
+    </SidebarProvider>
   );
 }
 
+// App component that doesn't directly use AppContext
 function App() {
-  const { isAuthenticated } = useAppContext();
-  
   return (
     <ThemeProvider defaultTheme="light" storageKey="task-manager-theme">
       <AppProvider>
-        {isAuthenticated ? (
-          <SidebarProvider>
-            <div className="flex h-screen w-full overflow-hidden">
-              <AppSidebar />
-              <MainContent />
-            </div>
-          </SidebarProvider>
-        ) : (
-          <MainContent />
-        )}
+        <MainContentWithAuth />
         <Toaster />
       </AppProvider>
     </ThemeProvider>

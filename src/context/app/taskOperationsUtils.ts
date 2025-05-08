@@ -1,4 +1,3 @@
-
 import { Task } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -113,49 +112,44 @@ export async function updateTaskInSupabase(
   return true;
 }
 
-// Delete task in Supabase - Fixed to properly handle async operations and prevent UI freezing
+// Delete task in Supabase - Improved to properly handle async operations and prevent UI freezing
 export async function deleteTaskInSupabase(taskId: string) {
   try {
     console.log("Starting to delete task with ID:", taskId);
     
-    // First delete all subtasks associated with the task
-    const { error: subtasksError } = await supabase
-      .from('subtasks')
-      .delete()
-      .eq('task_id', taskId);
+    // Use Promise.all to perform deletions in parallel where possible
+    await Promise.all([
+      // Delete all subtasks associated with the task
+      supabase
+        .from('subtasks')
+        .delete()
+        .eq('task_id', taskId)
+        .then(({ error }) => {
+          if (error) throw error;
+          console.log("Subtasks deleted successfully");
+        }),
       
-    if (subtasksError) {
-      console.error("Error deleting subtasks:", subtasksError);
-      throw subtasksError;
-    }
-    
-    console.log("Subtasks deleted successfully");
-    
-    // Delete all notes associated with the task
-    const { error: notesError } = await supabase
-      .from('notes')
-      .delete()
-      .eq('task_id', taskId);
+      // Delete all notes associated with the task
+      supabase
+        .from('notes')
+        .delete()
+        .eq('task_id', taskId)
+        .then(({ error }) => {
+          if (error) throw error;
+          console.log("Notes deleted successfully");
+        }),
       
-    if (notesError) {
-      console.error("Error deleting notes:", notesError);
-      throw notesError;
-    }
-    
-    console.log("Notes deleted successfully");
-    
-    // Delete any report relationships
-    const { error: reportsError } = await supabase
-      .from('report_tasks')
-      .delete()
-      .eq('task_id', taskId);
-      
-    if (reportsError && reportsError.code !== 'PGRST116') { // Ignore "no rows returned" error
-      console.error("Error deleting report relationships:", reportsError);
-      throw reportsError;
-    }
-    
-    console.log("Report relationships deleted successfully");
+      // Delete any report relationships
+      supabase
+        .from('report_tasks')
+        .delete()
+        .eq('task_id', taskId)
+        .then(({ error }) => {
+          // Ignore "no rows returned" error (PGRST116)
+          if (error && error.code !== 'PGRST116') throw error;
+          console.log("Report relationships deleted successfully");
+        })
+    ]);
     
     // Finally delete the task itself
     const { error: taskError } = await supabase

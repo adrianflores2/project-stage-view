@@ -12,15 +12,17 @@ export function useSubtaskOperations(
   
   const addSubtask = async (taskId: string, subtask: Omit<SubTask, 'id'>) => {
     try {
-      console.log("Adding subtask for task ID:", taskId);
-      
-      // Verify that the task exists first
-      const taskExists = tasks.some(task => task.id === taskId);
-      
-      if (!taskExists) {
-        throw new Error(`Task with ID ${taskId} not found`);
+      // First, validate that the task exists
+      const taskIndex = tasks.findIndex(t => t.id === taskId);
+      if (taskIndex === -1) {
+        toast({
+          title: "Task not found",
+          description: "Cannot add subtask to non-existent task",
+          variant: "destructive"
+        });
+        return;
       }
-      
+
       // Insert subtask in Supabase
       const { data: newSubtask, error } = await supabase
         .from('subtasks')
@@ -33,53 +35,31 @@ export function useSubtaskOperations(
         .single();
         
       if (error) {
-        console.error("Supabase error adding subtask:", error);
+        console.error("Error creating subtask:", error);
         throw error;
       }
       
-      if (!newSubtask) {
-        throw new Error("Failed to create subtask - no data returned");
-      }
+      // Update local state immediately
+      const updatedTasks = [...tasks];
+      const task = updatedTasks[taskIndex];
       
-      console.log("Subtask created successfully:", newSubtask);
+      // Add the new subtask to the task
+      const updatedTask = {
+        ...task,
+        subtasks: [...task.subtasks, newSubtask]
+      };
       
-      // Update task progress
-      const taskToUpdate = tasks.find(task => task.id === taskId);
-      if (taskToUpdate) {
-        const updatedTask = {
-          ...taskToUpdate,
-          subtasks: [...taskToUpdate.subtasks, newSubtask]
-        };
-        
-        const progress = calculateTaskProgress(updatedTask);
-        console.log("Updating task progress to:", progress);
-        
-        // Update progress in database
-        await supabase
-          .from('tasks')
-          .update({ progress })
-          .eq('id', taskId);
-        
-        setTasksList(prev => 
-          prev.map(task => {
-            if (task.id === taskId) {
-              return {
-                ...task,
-                subtasks: [...task.subtasks, newSubtask],
-                progress
-              };
-            }
-            return task;
-          })
-        );
-      }
+      // Recalculate the progress of the task
+      updatedTask.progress = calculateTaskProgress(updatedTask);
+      
+      // Update the task in the list
+      updatedTasks[taskIndex] = updatedTask;
+      setTasksList(updatedTasks);
       
       toast({
         title: "Subtask added",
-        description: "A new subtask has been added."
+        description: "New subtask has been created"
       });
-      
-      return newSubtask;
     } catch (error: any) {
       console.error("Error adding subtask:", error);
       toast({
@@ -87,78 +67,52 @@ export function useSubtaskOperations(
         description: error.message,
         variant: "destructive"
       });
-      throw error;
     }
   };
-
+  
   const updateSubtask = async (taskId: string, updatedSubtask: SubTask) => {
     try {
       // Update subtask in Supabase
       const { error } = await supabase
         .from('subtasks')
-        .update({ status: updatedSubtask.status })
+        .update({
+          title: updatedSubtask.title,
+          status: updatedSubtask.status
+        })
         .eq('id', updatedSubtask.id);
         
-      if (error) throw error;
+      if (error) {
+        console.error("Error updating subtask:", error);
+        throw error;
+      }
       
-      setTasksList(prev => 
-        prev.map(task => {
-          if (task.id === taskId) {
-            const updatedSubtasks = task.subtasks.map(
-              subtask => subtask.id === updatedSubtask.id ? updatedSubtask : subtask
-            );
-            
-            const updatedTask = {
-              ...task,
-              subtasks: updatedSubtasks
-            };
-            
-            const progress = calculateTaskProgress(updatedTask);
-            
-            // Check if all subtasks are completed
-            const allCompleted = updatedSubtasks.every(st => st.status === 'completed');
-            
-            // Update task status and completed date if all subtasks are completed
-            if (allCompleted && !(task.completedDate || task.completed_date)) {
-              const completedDate = new Date();
-              supabase
-                .from('tasks')
-                .update({
-                  status: 'completed',
-                  completed_date: completedDate,
-                  progress: 100
-                })
-                .eq('id', taskId)
-                .then();
-              
-              return {
-                ...updatedTask,
-                status: 'completed',
-                completedDate: completedDate,
-                completed_date: completedDate,
-                progress: 100
-              };
-            } else {
-              // Just update progress
-              supabase
-                .from('tasks')
-                .update({ progress })
-                .eq('id', taskId)
-                .then();
-                
-              return {
-                ...updatedTask,
-                progress
-              };
-            }
-          }
-          return task;
-        })
-      );
+      // Update local state immediately
+      const updatedTasks = tasks.map(task => {
+        if (task.id === taskId) {
+          // Update the specific subtask
+          const updatedSubtasks = task.subtasks.map(st => 
+            st.id === updatedSubtask.id ? updatedSubtask : st
+          );
+          
+          // Create an updated task with the new subtasks
+          const updatedTask = {
+            ...task,
+            subtasks: updatedSubtasks
+          };
+          
+          // Recalculate progress
+          updatedTask.progress = calculateTaskProgress(updatedTask);
+          
+          return updatedTask;
+        }
+        return task;
+      });
+      
+      setTasksList(updatedTasks);
       
       toast({
         title: "Subtask updated",
-        description: "The subtask has been updated."
+        description: "Subtask has been updated successfully"
       });
     } catch (error: any) {
       console.error("Error updating subtask:", error);
@@ -169,11 +123,9 @@ export function useSubtaskOperations(
       });
     }
   };
-
+  
   const deleteSubtask = async (taskId: string, subtaskId: string) => {
     try {
-      console.log("Deleting subtask:", subtaskId, "from task:", taskId);
-      
       // Delete subtask in Supabase
       const { error } = await supabase
         .from('subtasks')
@@ -181,46 +133,35 @@ export function useSubtaskOperations(
         .eq('id', subtaskId);
         
       if (error) {
-        console.error("Supabase error deleting subtask:", error);
+        console.error("Error deleting subtask:", error);
         throw error;
       }
       
-      // Update local state
-      setTasksList(prev => 
-        prev.map(task => {
-          if (task.id === taskId) {
-            // Remove the subtask from the array
-            const updatedSubtasks = task.subtasks.filter(
-              subtask => subtask.id !== subtaskId
-            );
-            
-            const updatedTask = {
-              ...task,
-              subtasks: updatedSubtasks
-            };
-            
-            // Recalculate progress
-            const progress = calculateTaskProgress(updatedTask);
-            
-            // Update progress in database
-            supabase
-              .from('tasks')
-              .update({ progress })
-              .eq('id', taskId)
-              .then();
-              
-            return {
-              ...updatedTask,
-              progress
-            };
-          }
-          return task;
-        })
-      );
+      // Update local state immediately
+      const updatedTasks = tasks.map(task => {
+        if (task.id === taskId) {
+          // Remove the subtask
+          const updatedSubtasks = task.subtasks.filter(st => st.id !== subtaskId);
+          
+          // Create an updated task with the remaining subtasks
+          const updatedTask = {
+            ...task,
+            subtasks: updatedSubtasks
+          };
+          
+          // Recalculate progress
+          updatedTask.progress = calculateTaskProgress(updatedTask);
+          
+          return updatedTask;
+        }
+        return task;
+      });
+      
+      setTasksList(updatedTasks);
       
       toast({
         title: "Subtask deleted",
-        description: "The subtask has been removed."
+        description: "Subtask has been removed successfully"
       });
     } catch (error: any) {
       console.error("Error deleting subtask:", error);
@@ -231,6 +172,6 @@ export function useSubtaskOperations(
       });
     }
   };
-
+  
   return { addSubtask, updateSubtask, deleteSubtask };
 }

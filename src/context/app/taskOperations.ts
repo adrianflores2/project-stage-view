@@ -147,6 +147,8 @@ export function useTaskOperations(
       // Check if we're creating multiple tasks for different users
       const assignees = Array.isArray(task.assignedTo) ? task.assignedTo : [task.assignedTo];
       
+      const createdTasks = [];
+      
       for (const assignee of assignees) {
         console.log("Creating task with values:", {
           title: task.title,
@@ -181,14 +183,44 @@ export function useTaskOperations(
           throw error;
         }
         
-        // We don't need to manually update the state here
-        // The realtime subscription will handle adding the task to state
+        // Immediately update local state with the new task
+        // Create a full task object with empty subtasks and notes arrays
+        const fullTask: Task = {
+          ...newTask,
+          id: newTask.id,
+          title: newTask.title,
+          description: newTask.description || '',
+          assignedTo: newTask.assigned_to,
+          assigned_to: newTask.assigned_to,
+          projectId: newTask.project_id,
+          project_id: newTask.project_id,
+          projectStage: task.projectStage || '',
+          project_stage_id: newTask.project_stage_id,
+          status: newTask.status,
+          priority: newTask.priority || 'Media',
+          dueDate: newTask.due_date,
+          due_date: newTask.due_date,
+          assignedDate: newTask.assigned_date || new Date(),
+          assigned_date: newTask.assigned_date,
+          completedDate: newTask.completed_date,
+          completed_date: newTask.completed_date,
+          progress: 0,
+          subtasks: [],
+          notes: []
+        };
+        
+        createdTasks.push(fullTask);
+        
+        // Update state immediately
+        setTasksList(prev => [...prev, fullTask]);
       }
       
       toast({
         title: "Task created",
         description: `Task "${task.title}" has been created.`
       });
+      
+      return createdTasks;
     } catch (error: any) {
       console.error("Error creating task:", error);
       toast({
@@ -220,11 +252,23 @@ export function useTaskOperations(
           ? new Date(completedDate) 
           : null;
       
+      // Update local state immediately
+      setTasksList(prev => 
+        prev.map(task => {
+          if (task.id === updatedTask.id) {
+            return {
+              ...updatedTask,
+              progress: progress,
+              completedDate: completedDateForUpdate,
+              completed_date: completedDateForUpdate
+            };
+          }
+          return task;
+        })
+      );
+      
       // Update task in Supabase
       await updateTaskInSupabase(updatedTask, progress, completedDateForUpdate);
-      
-      // We don't need to manually update the state here
-      // The realtime subscription will handle updating the task in state
       
       toast({
         title: "Task updated",
@@ -261,35 +305,46 @@ export function useTaskOperations(
         description: "Removing task and related data"
       });
       
-      // Delete task in Supabase
-      await deleteTaskInSupabase(taskId);
+      // Delete task in Supabase (using a non-blocking approach)
+      deleteTaskInSupabase(taskId)
+        .then(() => {
+          toast({
+            title: "Task deleted",
+            description: "The task has been removed successfully"
+          });
+        })
+        .catch((error) => {
+          console.error("Error in deleteTaskInSupabase:", error);
+          
+          // If deletion fails, fetch fresh data to restore state
+          toast({
+            title: "Failed to delete task",
+            description: error.message || "An unexpected error occurred",
+            variant: "destructive"
+          });
+          
+          // Reload the tasks list to restore the UI state
+          supabase.from('tasks').select('*').then(async ({ data }) => {
+            if (data) {
+              const updatedTasks = [];
+              for (const task of data) {
+                const taskWithDetails = await fetchTaskDetails(task);
+                if (taskWithDetails) {
+                  updatedTasks.push(taskWithDetails);
+                }
+              }
+              setTasksList(updatedTasks);
+            }
+          });
+        });
       
-      toast({
-        title: "Task deleted",
-        description: "The task has been removed successfully"
-      });
     } catch (error: any) {
-      console.error("Error deleting task:", error);
-      
-      // If deletion fails, fetch fresh data to restore state
+      console.error("Error starting task deletion:", error);
       toast({
         title: "Failed to delete task",
         description: error.message || "An unexpected error occurred",
         variant: "destructive"
       });
-      
-      // Reload the tasks list to restore the deleted task in the UI
-      const { data } = await supabase.from('tasks').select('*');
-      if (data) {
-        const updatedTasks = [];
-        for (const task of data) {
-          const taskWithDetails = await fetchTaskDetails(task);
-          if (taskWithDetails) {
-            updatedTasks.push(taskWithDetails);
-          }
-        }
-        setTasksList(updatedTasks);
-      }
     }
   };
   
@@ -305,10 +360,7 @@ export function useTaskOperations(
         return;
       }
       
-      // Reassign task in Supabase
-      await reassignTaskInSupabase(taskId, newAssigneeId);
-      
-      // Update local state
+      // Update local state immediately
       setTasksList(prev => 
         prev.map(task => {
           if (task.id === taskId) {
@@ -321,6 +373,9 @@ export function useTaskOperations(
           return task;
         })
       );
+      
+      // Reassign task in Supabase
+      await reassignTaskInSupabase(taskId, newAssigneeId);
       
       toast({
         title: "Task reassigned",

@@ -3,6 +3,7 @@ import { Route, Routes } from 'react-router-dom';
 import { ThemeProvider } from '@/components/theme-provider';
 import { AppProvider } from '@/context/AppContext';
 import { AppSidebar } from '@/components/AppSidebar';
+import { SidebarProvider } from '@/components/ui/sidebar';
 
 // Pages
 import Login from '@/pages/Login';
@@ -42,10 +43,12 @@ function App() {
   return (
     <ThemeProvider defaultTheme="light" storageKey="task-manager-theme">
       <AppProvider>
-        <div className="flex h-screen w-full overflow-hidden">
-          <AppSidebar />
-          <MainContent />
-        </div>
+        <SidebarProvider>
+          <div className="flex h-screen w-full overflow-hidden">
+            <AppSidebar />
+            <MainContent />
+          </div>
+        </SidebarProvider>
         <Toaster />
       </AppProvider>
     </ThemeProvider>

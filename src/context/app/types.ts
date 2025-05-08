@@ -1,4 +1,3 @@
-
 import { User, Task, Project, SubTask, Note, Report } from '@/types';
 
 export interface AppContextProps {

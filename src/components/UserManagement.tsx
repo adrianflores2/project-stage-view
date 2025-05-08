@@ -39,7 +39,7 @@ const UserManagement = ({ open, onOpenChange }: UserManagementDialogProps) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'worker' | 'coordinator' | 'supervisor'>('worker');
+  const [role, setRole] = useState<'worker' | 'coordinator' | 'supervisor' | 'admin'>('worker');
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,7 +58,8 @@ const UserManagement = ({ open, onOpenChange }: UserManagementDialogProps) => {
     setRole('worker');
   };
 
-  const canManageUsers = currentUser?.role === 'coordinator';
+  // Admin users and coordinators can manage users
+  const canManageUsers = currentUser?.role === 'coordinator' || currentUser?.role === 'admin';
   const workerUsers = users.filter(u => u.role === 'worker');
   
   return (
@@ -117,6 +118,9 @@ const UserManagement = ({ open, onOpenChange }: UserManagementDialogProps) => {
                       <SelectItem value="worker">Worker</SelectItem>
                       <SelectItem value="coordinator">Coordinator</SelectItem>
                       <SelectItem value="supervisor">Supervisor</SelectItem>
+                      {currentUser?.role === 'admin' && (
+                        <SelectItem value="admin">Admin</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -149,8 +153,11 @@ const UserManagement = ({ open, onOpenChange }: UserManagementDialogProps) => {
                       </TableCell>
                       {canManageUsers && (
                         <TableCell>
-                          {/* Only allow removing workers, not other coordinators/supervisors */}
-                          {user.role === 'worker' && user.id !== currentUser?.id && (
+                          {/* Only allow removing workers or users with lower privilege levels */}
+                          {((user.role === 'worker' || 
+                             (user.role === 'coordinator' && currentUser?.role === 'admin') || 
+                             (user.role === 'supervisor' && currentUser?.role === 'admin')) && 
+                             user.id !== currentUser?.id) && (
                             <Button 
                               variant="destructive" 
                               size="sm" 

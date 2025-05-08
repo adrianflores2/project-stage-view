@@ -33,6 +33,25 @@ export function useUserOperations(
         
       if (error) throw error;
       
+      // If the current user is an admin, also create auth user directly
+      if (user.password && user.role === 'admin') {
+        // Create the authentication user
+        const { error: authError } = await supabase.auth.admin.createUser({
+          email: user.email,
+          password: user.password,
+          email_confirm: true, // Auto-confirm email for admin-created users
+          user_metadata: {
+            name: user.name,
+            role: user.role
+          }
+        });
+        
+        if (authError) {
+          console.error("Error creating auth user:", authError);
+          // Continue as we've already created the user in our users table
+        }
+      }
+      
       setUsersList(prev => [...prev, newUser]);
       
       toast({

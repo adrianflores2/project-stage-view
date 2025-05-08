@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -126,12 +127,6 @@
 .project-section {
   border-radius: 0.75rem;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-}
-
-/* Remove the unused margin and transition properties that cause layout issues */
-.main-content {
-  width: 100%;
-  height: 100%;
 }
 
 /* Sidebar menu button styles in collapsed state */

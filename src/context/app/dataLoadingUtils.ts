@@ -192,6 +192,7 @@ export async function processReportsResponse(reportsData: any[]): Promise<Report
     userName: report.users?.name || 'Unknown',
     date: new Date(report.date),
     message: report.message || '',
+    projectId: report.project_id || undefined, // Add projectId from the database
     completedTasks: tasksByReport[report.id] || [],
     completedSubtasks: subtasksByReport[report.id] || []
   }));

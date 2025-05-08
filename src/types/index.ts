@@ -1,4 +1,3 @@
-
 export type UserRole = 'worker' | 'coordinator' | 'supervisor';
 
 export interface User {
@@ -56,7 +55,7 @@ export interface Project {
   color: string;
 }
 
-// New Report type for worker-generated reports
+// Updated Report type with projectId field
 export interface Report {
   id: string;
   userId: string;
@@ -65,6 +64,7 @@ export interface Report {
   message: string;
   completedTasks: Task[];
   completedSubtasks: SubTask[];
+  projectId?: string; // New field to link report to project
 }
 
 // Supabase database types
@@ -190,6 +190,29 @@ export interface Database {
           due_date?: string | null;
           completed_date?: string | null;
           updated_at?: string | null;
+        };
+      };
+      reports: {
+        Row: {
+          id: string;
+          user_id: string | null;
+          date: string | null;
+          message: string | null;
+          project_id: string | null; // Added project_id field to match database change
+        };
+        Insert: {
+          id?: string;
+          user_id?: string | null;
+          date?: string | null;
+          message?: string | null;
+          project_id?: string | null; // Added project_id field for inserts
+        };
+        Update: {
+          id?: string;
+          user_id?: string | null;
+          date?: string | null;
+          message?: string | null;
+          project_id?: string | null; // Added project_id field for updates
         };
       };
     };

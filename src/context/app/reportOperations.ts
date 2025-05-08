@@ -55,13 +55,18 @@ export function useReportOperations(
         }));
       }
       
+      // Find the task to determine its project
+      const task = tasks.find(t => t.id === taskId);
+      const projectId = task?.projectId || task?.project_id;
+      
       // Create new report in Supabase
       const { data: newReport, error } = await supabase
         .from('reports')
         .insert({
           user_id: currentUser.id,
           message: message,
-          date: new Date()
+          date: new Date(),
+          project_id: projectId // Add project_id from the task
         })
         .select()
         .single();
@@ -130,6 +135,7 @@ export function useReportOperations(
         userName: currentUser.name,
         date: newReport.date,
         message: newReport.message,
+        projectId: newReport.project_id,
         completedTasks: todaysCompletedTasks,
         completedSubtasks: completedSubtasks
       };

@@ -172,21 +172,31 @@ export type Database = {
           date: string | null
           id: string
           message: string | null
+          project_id: string | null
           user_id: string | null
         }
         Insert: {
           date?: string | null
           id?: string
           message?: string | null
+          project_id?: string | null
           user_id?: string | null
         }
         Update: {
           date?: string | null
           id?: string
           message?: string | null
+          project_id?: string | null
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "reports_user_id_fkey"
             columns: ["user_id"]

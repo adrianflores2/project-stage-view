@@ -22,7 +22,6 @@ const TaskListCard = ({ task, projectColor, showMinimalInfo = false }: TaskListC
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   
   const assignedUser = getUserById(task.assignedTo || task.assigned_to || '');
-  const canViewDetails = true;
   
   // For completed tasks with minimal info
   if (showMinimalInfo && task.status === 'completed') {
@@ -30,7 +29,7 @@ const TaskListCard = ({ task, projectColor, showMinimalInfo = false }: TaskListC
       <>
         <div 
           className="bg-white border rounded-md p-2.5 cursor-pointer hover:bg-gray-50 transition-colors group"
-          onClick={() => canViewDetails && setShowDetailDialog(true)}
+          onClick={() => setShowDetailDialog(true)}
           style={{ background: getBackgroundTint(projectColor) }}
         >
           <div className="flex justify-between items-start">
@@ -89,7 +88,7 @@ const TaskListCard = ({ task, projectColor, showMinimalInfo = false }: TaskListC
     <>
       <div 
         className="bg-white border rounded-md p-2.5 cursor-pointer hover:bg-gray-50 transition-colors group"
-        onClick={() => canViewDetails && setShowDetailDialog(true)}
+        onClick={() => setShowDetailDialog(true)}
         style={{ background: getBackgroundTint(projectColor) }}
       >
         <div className="flex justify-between items-start">

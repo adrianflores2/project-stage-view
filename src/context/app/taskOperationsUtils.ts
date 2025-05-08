@@ -1,4 +1,3 @@
-
 import { Task } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -117,37 +116,22 @@ export async function updateTaskInSupabase(
 export async function deleteTaskInSupabase(taskId: string) {
   try {
     // First delete all subtasks associated with the task
-    const { error: subtasksError } = await supabase
+    await supabase
       .from('subtasks')
       .delete()
       .eq('task_id', taskId);
-      
-    if (subtasksError) {
-      console.error("Error deleting subtasks:", subtasksError);
-      throw subtasksError;
-    }
     
     // Delete all notes associated with the task
-    const { error: notesError } = await supabase
+    await supabase
       .from('notes')
       .delete()
       .eq('task_id', taskId);
-      
-    if (notesError) {
-      console.error("Error deleting notes:", notesError);
-      throw notesError;
-    }
     
     // Delete any report relationships
-    const { error: reportTasksError } = await supabase
+    await supabase
       .from('report_tasks')
       .delete()
       .eq('task_id', taskId);
-      
-    if (reportTasksError) {
-      console.error("Error deleting report_tasks:", reportTasksError);
-      // Continue even if there's an error here, as it might not exist
-    }
     
     // Finally delete the task itself
     const { error } = await supabase

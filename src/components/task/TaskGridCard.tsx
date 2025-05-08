@@ -29,7 +29,7 @@ const TaskGridCard = ({ task, projectColor, showMinimalInfo = false }: TaskGridC
   if (showMinimalInfo && task.status === 'completed') {
     return (
       <Card 
-        className="cursor-pointer hover:shadow-md transition-shadow"
+        className="cursor-pointer hover:shadow-md transition-shadow group"
         onClick={() => setShowDetailDialog(true)}
         style={{ background: getBackgroundTint(projectColor) }}
       >
@@ -63,15 +63,24 @@ const TaskGridCard = ({ task, projectColor, showMinimalInfo = false }: TaskGridC
             </div>
           )}
           
-          {/* Subtasks */}
+          {/* Subtasks - only visible on hover */}
           {task.subtasks.length > 0 && (
             <div className="text-xs flex items-center gap-1">
               <List size={12} className="mr-1 text-gray-500" />
               <span className="text-gray-500">{task.subtasks.filter(st => st.status === 'completed').length}/{task.subtasks.length}</span>
-              <SubtasksList subtasks={task.subtasks} className="mt-2" />
+              <SubtasksList subtasks={task.subtasks} className="mt-2 hidden group-hover:block" />
             </div>
           )}
         </CardContent>
+        
+        {showDetailDialog && (
+          <TaskDetail 
+            task={task} 
+            projectColor={projectColor}
+            open={showDetailDialog}
+            onOpenChange={setShowDetailDialog}
+          />
+        )}
       </Card>
     );
   }
@@ -79,7 +88,7 @@ const TaskGridCard = ({ task, projectColor, showMinimalInfo = false }: TaskGridC
   // Regular card display
   return (
     <Card 
-      className="cursor-pointer hover:shadow-md transition-shadow"
+      className="cursor-pointer hover:shadow-md transition-shadow group"
       onClick={() => setShowDetailDialog(true)}
       style={{ background: getBackgroundTint(projectColor) }}
     >
@@ -137,6 +146,14 @@ const TaskGridCard = ({ task, projectColor, showMinimalInfo = false }: TaskGridC
             </Tooltip>
           )}
         </div>
+        
+        {/* Subtasks - only visible on hover */}
+        {task.subtasks.length > 0 && (
+          <SubtasksList 
+            subtasks={task.subtasks}
+            className="mt-2 hidden group-hover:block" 
+          />
+        )}
       </CardContent>
       
       {showDetailDialog && (

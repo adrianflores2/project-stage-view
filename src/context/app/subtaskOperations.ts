@@ -125,63 +125,70 @@ export function useSubtaskOperations(
   };
   
   const deleteSubtask = async (taskId: string, subtaskId: string) => {
-    try {
-      // Show a loading toast
-      toast({
-        title: "Deleting subtask...",
-        description: "Removing subtask from task"
-      });
-      
-      // IMPORTANT: First complete the database operation
-      // Delete subtask in Supabase first
-      const { error } = await supabase
-        .from('subtasks')
-        .delete()
-        .eq('id', subtaskId);
+    // Return a promise to allow proper async handling and state updates
+    return new Promise<void>(async (resolve, reject) => {
+      try {
+        // Show a loading toast
+        toast({
+          title: "Deleting subtask...",
+          description: "Removing subtask from task"
+        });
         
-      if (error) {
-        console.error("Error deleting subtask:", error);
-        throw error;
-      }
-      
-      // Only update state after successful database operation
-      const updatedTasks = tasks.map(task => {
-        if (task.id === taskId) {
-          // Remove the subtask
-          const updatedSubtasks = task.subtasks.filter(st => st.id !== subtaskId);
+        // Delete subtask in Supabase first
+        const { error } = await supabase
+          .from('subtasks')
+          .delete()
+          .eq('id', subtaskId);
           
-          // Create an updated task with the remaining subtasks
-          const updatedTask = {
-            ...task,
-            subtasks: updatedSubtasks
-          };
-          
-          // Recalculate progress
-          updatedTask.progress = calculateTaskProgress(updatedTask);
-          
-          return updatedTask;
+        if (error) {
+          console.error("Error deleting subtask:", error);
+          reject(error);
+          return;
         }
-        return task;
-      });
-      
-      // Update the state with the new task list
-      setTasksList(updatedTasks);
-      
-      // Show success toast
-      toast({
-        title: "Subtask deleted",
-        description: "Subtask has been removed successfully"
-      });
-    } catch (error: any) {
-      console.error("Error deleting subtask:", error);
-      toast({
-        title: "Failed to delete subtask",
-        description: error.message || "An unexpected error occurred",
-        variant: "destructive"
-      });
-      
-      // Don't update the UI if the database operation fails
-    }
+        
+        // Only update state after successful database operation
+        const updatedTasks = tasks.map(task => {
+          if (task.id === taskId) {
+            // Remove the subtask
+            const updatedSubtasks = task.subtasks.filter(st => st.id !== subtaskId);
+            
+            // Create an updated task with the remaining subtasks
+            const updatedTask = {
+              ...task,
+              subtasks: updatedSubtasks
+            };
+            
+            // Recalculate progress
+            updatedTask.progress = calculateTaskProgress(updatedTask);
+            
+            return updatedTask;
+          }
+          return task;
+        });
+        
+        // Update the state with the new task list
+        setTasksList(updatedTasks);
+        
+        // Show success toast
+        toast({
+          title: "Subtask deleted",
+          description: "Subtask has been removed successfully"
+        });
+        
+        // Resolve the promise to signal completion
+        resolve();
+      } catch (error: any) {
+        console.error("Error deleting subtask:", error);
+        toast({
+          title: "Failed to delete subtask",
+          description: error.message || "An unexpected error occurred",
+          variant: "destructive"
+        });
+        
+        // Reject the promise to signal error
+        reject(error);
+      }
+    });
   };
   
   return { addSubtask, updateSubtask, deleteSubtask };

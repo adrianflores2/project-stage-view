@@ -12,6 +12,8 @@ const CustomAlertDialogTrigger = AlertDialogPrimitive.Trigger
 
 const CustomAlertDialogPortal = AlertDialogPrimitive.Portal
 
+const CustomAlertDialogClose = AlertDialogPrimitive.Cancel
+
 const CustomAlertDialogOverlay = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Overlay>,
   React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Overlay>
@@ -29,8 +31,8 @@ CustomAlertDialogOverlay.displayName = "CustomAlertDialogOverlay"
 
 const CustomAlertDialogContent = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Content> & { hideCloseButton?: boolean }
+>(({ className, children, hideCloseButton = false, ...props }, ref) => (
   <CustomAlertDialogPortal>
     <CustomAlertDialogOverlay />
     <AlertDialogPrimitive.Content
@@ -42,10 +44,12 @@ const CustomAlertDialogContent = React.forwardRef<
       {...props}
     >
       {children}
-      <AlertDialogPrimitive.Cancel className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-        <X className="h-4 w-4" aria-hidden="true" />
-        <span className="sr-only">Close</span>
-      </AlertDialogPrimitive.Cancel>
+      {!hideCloseButton && (
+        <CustomAlertDialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+          <X className="h-4 w-4" aria-hidden="true" />
+          <span className="sr-only">Close</span>
+        </CustomAlertDialogClose>
+      )}
     </AlertDialogPrimitive.Content>
   </CustomAlertDialogPortal>
 ))
@@ -135,6 +139,7 @@ export {
   CustomAlertDialog,
   CustomAlertDialogPortal,
   CustomAlertDialogOverlay,
+  CustomAlertDialogClose,
   CustomAlertDialogTrigger,
   CustomAlertDialogContent,
   CustomAlertDialogHeader,

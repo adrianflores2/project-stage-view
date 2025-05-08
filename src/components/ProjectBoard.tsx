@@ -3,19 +3,20 @@ import { useState } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import ProjectColumn from './ProjectColumn';
 import { 
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  CustomAlertDialog,
+  CustomAlertDialogAction,
+  CustomAlertDialogCancel,
+  CustomAlertDialogContent,
+  CustomAlertDialogDescription,
+  CustomAlertDialogFooter,
+  CustomAlertDialogHeader,
+  CustomAlertDialogTitle,
+} from "@/components/ui/custom-alert-dialog";
 import CreateTaskDialog from './CreateTaskDialog';
 import { Task, TaskStatus } from '@/types';
 import ProjectHeader from './project/ProjectHeader';
 import CompletedTasksSection from './project/CompletedTasksSection';
+import { Loader2 } from 'lucide-react';
 
 const ProjectBoard = () => {
   const { currentUser, projects, users, getFilteredTasks, deleteProject, updateTask } = useAppContext();
@@ -23,6 +24,7 @@ const ProjectBoard = () => {
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   // Determine which users can be filtered based on role
   let filterableUsers = [];
@@ -56,8 +58,15 @@ const ProjectBoard = () => {
   });
   
   const handleDeleteProject = async (projectId: string) => {
-    await deleteProject(projectId);
-    setProjectToDelete(null);
+    setIsDeleting(true);
+    try {
+      await deleteProject(projectId);
+    } catch (error) {
+      console.error("Error deleting project:", error);
+    } finally {
+      setIsDeleting(false);
+      setProjectToDelete(null);
+    }
   };
   
   const handleMarkTaskUndone = async (task: Task) => {
@@ -126,25 +135,32 @@ const ProjectBoard = () => {
       )}
       
       {/* Delete Project Confirmation */}
-      <AlertDialog open={!!projectToDelete} onOpenChange={(open) => !open && setProjectToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Project</AlertDialogTitle>
-            <AlertDialogDescription>
+      <CustomAlertDialog open={!!projectToDelete} onOpenChange={(open) => !open && setProjectToDelete(null)}>
+        <CustomAlertDialogContent aria-describedby="delete-project-description">
+          <CustomAlertDialogHeader>
+            <CustomAlertDialogTitle>Delete Project</CustomAlertDialogTitle>
+            <CustomAlertDialogDescription id="delete-project-description">
               Are you sure you want to delete this project? This will remove all tasks and cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            </CustomAlertDialogDescription>
+          </CustomAlertDialogHeader>
+          <CustomAlertDialogFooter>
+            <CustomAlertDialogCancel disabled={isDeleting}>Cancel</CustomAlertDialogCancel>
+            <CustomAlertDialogAction 
               onClick={() => projectToDelete && handleDeleteProject(projectToDelete)}
               className="bg-destructive text-destructive-foreground"
+              disabled={isDeleting}
             >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...
+                </>
+              ) : (
+                'Delete'
+              )}
+            </CustomAlertDialogAction>
+          </CustomAlertDialogFooter>
+        </CustomAlertDialogContent>
+      </CustomAlertDialog>
     </div>
   );
 };

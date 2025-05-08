@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Task, SubTask } from '@/types';
 import { useAppContext } from '@/context/AppContext';
@@ -22,15 +21,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { 
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  CustomAlertDialog,
+  CustomAlertDialogAction,
+  CustomAlertDialogCancel,
+  CustomAlertDialogContent,
+  CustomAlertDialogDescription,
+  CustomAlertDialogFooter,
+  CustomAlertDialogHeader,
+  CustomAlertDialogTitle,
+} from "@/components/ui/custom-alert-dialog";
 import { 
   CheckCircle2, 
   Clock, 
@@ -40,7 +39,8 @@ import {
   Save,
   FileText,
   Trash,
-  UserPlus
+  UserPlus,
+  Loader2
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -76,6 +76,8 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
   const [confirmDeleteSubtask, setConfirmDeleteSubtask] = useState<string | null>(null);
   const [reassignDialogOpen, setReassignDialogOpen] = useState(false);
   const [newAssigneeId, setNewAssigneeId] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeletingSubtask, setIsDeletingSubtask] = useState(false);
   
   const assignedUser = getUserById(task.assignedTo || task.assigned_to || '');
   const project = getProjectById(task.projectId || task.project_id || '');
@@ -125,8 +127,15 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
   
   const confirmSubtaskDelete = async () => {
     if (confirmDeleteSubtask) {
-      await deleteSubtask(task.id, confirmDeleteSubtask);
-      setConfirmDeleteSubtask(null);
+      setIsDeletingSubtask(true);
+      try {
+        await deleteSubtask(task.id, confirmDeleteSubtask);
+      } catch (error) {
+        console.error("Error deleting subtask:", error);
+      } finally {
+        setIsDeletingSubtask(false);
+        setConfirmDeleteSubtask(null);
+      }
     }
   };
   
@@ -158,8 +167,18 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
   };
   
   const handleDeleteTask = async () => {
-    await deleteTask(task.id);
-    onOpenChange(false);
+    setIsDeleting(true);
+    try {
+      await deleteTask(task.id);
+      // Only close dialog after successful deletion
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      // Keep dialog open if deletion fails
+    } finally {
+      setIsDeleting(false);
+      setConfirmDelete(false);
+    }
   };
   
   const handleReassignTask = async () => {
@@ -568,40 +587,60 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
       </Dialog>
       
       {/* Delete Task Confirmation Dialog */}
-      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
+      <CustomAlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <CustomAlertDialogContent aria-describedby="delete-task-description">
+          <CustomAlertDialogHeader>
+            <CustomAlertDialogTitle>Are you sure?</CustomAlertDialogTitle>
+            <CustomAlertDialogDescription id="delete-task-description">
               This will permanently delete the task "{task.title}". This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteTask} className="bg-destructive text-destructive-foreground">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </CustomAlertDialogDescription>
+          </CustomAlertDialogHeader>
+          <CustomAlertDialogFooter>
+            <CustomAlertDialogCancel disabled={isDeleting}>Cancel</CustomAlertDialogCancel>
+            <CustomAlertDialogAction 
+              onClick={handleDeleteTask} 
+              className="bg-destructive text-destructive-foreground"
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...
+                </>
+              ) : (
+                'Delete'
+              )}
+            </CustomAlertDialogAction>
+          </CustomAlertDialogFooter>
+        </CustomAlertDialogContent>
+      </CustomAlertDialog>
       
       {/* Delete Subtask Confirmation Dialog */}
-      <AlertDialog open={!!confirmDeleteSubtask} onOpenChange={() => setConfirmDeleteSubtask(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete subtask?</AlertDialogTitle>
-            <AlertDialogDescription>
+      <CustomAlertDialog open={!!confirmDeleteSubtask} onOpenChange={() => setConfirmDeleteSubtask(null)}>
+        <CustomAlertDialogContent aria-describedby="delete-subtask-description">
+          <CustomAlertDialogHeader>
+            <CustomAlertDialogTitle>Delete subtask?</CustomAlertDialogTitle>
+            <CustomAlertDialogDescription id="delete-subtask-description">
               This will permanently delete the selected subtask. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmSubtaskDelete} className="bg-destructive text-destructive-foreground">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </CustomAlertDialogDescription>
+          </CustomAlertDialogHeader>
+          <CustomAlertDialogFooter>
+            <CustomAlertDialogCancel disabled={isDeletingSubtask}>Cancel</CustomAlertDialogCancel>
+            <CustomAlertDialogAction 
+              onClick={confirmSubtaskDelete} 
+              className="bg-destructive text-destructive-foreground"
+              disabled={isDeletingSubtask}
+            >
+              {isDeletingSubtask ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...
+                </>
+              ) : (
+                'Delete'
+              )}
+            </CustomAlertDialogAction>
+          </CustomAlertDialogFooter>
+        </CustomAlertDialogContent>
+      </CustomAlertDialog>
       
       {/* Reassign Task Dialog */}
       <Dialog open={reassignDialogOpen} onOpenChange={setReassignDialogOpen}>

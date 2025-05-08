@@ -1,3 +1,4 @@
+
 import { Task } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -112,36 +113,51 @@ export async function updateTaskInSupabase(
   return true;
 }
 
-// Delete task in Supabase
+// Delete task in Supabase - Fixed to handle promises properly
 export async function deleteTaskInSupabase(taskId: string) {
   try {
     // First delete all subtasks associated with the task
-    await supabase
+    const { error: subtasksError } = await supabase
       .from('subtasks')
       .delete()
       .eq('task_id', taskId);
+      
+    if (subtasksError) {
+      console.error("Error deleting subtasks:", subtasksError);
+      throw subtasksError;
+    }
     
     // Delete all notes associated with the task
-    await supabase
+    const { error: notesError } = await supabase
       .from('notes')
       .delete()
       .eq('task_id', taskId);
+      
+    if (notesError) {
+      console.error("Error deleting notes:", notesError);
+      throw notesError;
+    }
     
     // Delete any report relationships
-    await supabase
+    const { error: reportsError } = await supabase
       .from('report_tasks')
       .delete()
       .eq('task_id', taskId);
+      
+    if (reportsError) {
+      console.error("Error deleting report relationships:", reportsError);
+      throw reportsError;
+    }
     
     // Finally delete the task itself
-    const { error } = await supabase
+    const { error: taskError } = await supabase
       .from('tasks')
       .delete()
       .eq('id', taskId);
       
-    if (error) {
-      console.error("Error deleting task:", error);
-      throw error;
+    if (taskError) {
+      console.error("Error deleting task:", taskError);
+      throw taskError;
     }
     
     return true;

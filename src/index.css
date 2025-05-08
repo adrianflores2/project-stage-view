@@ -124,3 +124,10 @@
   border-radius: 0.75rem;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
+
+/* Responsive sidebar adjustments */
+@media (max-width: 768px) {
+  .collapsed-sidebar {
+    width: 2.5rem;
+  }
+}

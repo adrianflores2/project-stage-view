@@ -243,22 +243,21 @@ export function useTaskOperations(
   
   const deleteTask = async (taskId: string) => {
     try {
-      // First check if user is coordinator
-      if (!currentUser || currentUser.role !== 'coordinator') {
+      // First check if user is coordinator or admin
+      if (!currentUser || (currentUser.role !== 'coordinator' && currentUser.role !== 'admin')) {
         toast({
           title: "Permission denied",
-          description: "Only coordinators can delete tasks",
+          description: "Only coordinators and admins can delete tasks",
           variant: "destructive"
         });
         return;
       }
       
-      // Delete task in Supabase
-      await deleteTaskInSupabase(taskId);
-      
-      // Update local state - this gives immediate visual feedback
-      // The realtime subscription will also handle this
+      // Update local state first for immediate visual feedback
       setTasksList(prev => prev.filter(task => task.id !== taskId));
+      
+      // Delete task in Supabase (moved after state update to prevent UI freezing)
+      await deleteTaskInSupabase(taskId);
       
       toast({
         title: "Task deleted",
@@ -266,6 +265,7 @@ export function useTaskOperations(
       });
     } catch (error: any) {
       console.error("Error deleting task:", error);
+      // If deletion fails, revert the state change by fetching tasks again
       toast({
         title: "Failed to delete task",
         description: error.message,

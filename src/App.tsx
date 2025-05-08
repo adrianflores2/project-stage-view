@@ -27,7 +27,7 @@ function MainContentWithAuth() {
   }
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultState="expanded">
       <div className="flex h-screen w-full">
         <AppSidebar />
         <div id="main-content" className="flex-1 overflow-auto">

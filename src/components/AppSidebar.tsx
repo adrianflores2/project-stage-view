@@ -91,7 +91,7 @@ export function AppSidebar() {
 
   return (
     <>
-      <Sidebar className={`sidebar-glass ${collapsed ? 'sidebar-collapsed' : 'sidebar-expanded'}`}>
+      <Sidebar className={`sidebar-glass ${collapsed ? 'sidebar-collapsed' : 'sidebar-expanded'}`} variant="sidebar" collapsible="icon">
         <SidebarHeader className="relative">
           <div className="flex items-center space-x-2 px-2">
             <Kanban className="h-6 w-6 text-white" />

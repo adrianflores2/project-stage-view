@@ -1,10 +1,11 @@
 
-import React from 'react';
-import { Plus, Kanban } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, Kanban, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { User } from '@/types';
 import FilterableUserSelect from './FilterableUserSelect';
 import ViewModeToggle from './ViewModeToggle';
+import { format } from 'date-fns';
 
 interface ProjectHeaderProps {
   selectedUserId: string | undefined;
@@ -25,11 +26,26 @@ const ProjectHeader = ({
   filterableUsers,
   canCreateTask
 }: ProjectHeaderProps) => {
+  const [currentTime, setCurrentTime] = useState(new Date());
+  
+  // Update time every minute
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000);
+    
+    return () => clearInterval(interval);
+  }, []);
+  
   return (
     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
       <div>
         <h1 className="text-2xl font-bold flex items-center mb-2">
           <Kanban className="mr-2" /> Task Board
+          <span className="text-sm font-normal text-gray-500 flex items-center ml-3">
+            <Clock size={16} className="mr-1" />
+            {format(currentTime, 'HH:mm')}
+          </span>
         </h1>
         <p className="text-sm text-gray-500">
           View task board by project.

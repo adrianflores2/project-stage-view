@@ -193,8 +193,8 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" style={{ position: 'fixed', top: '50%', transform: 'translateX(-50%) translateY(-50%)', left: '50%' }}>
+          <DialogHeader className="sticky top-0 bg-white z-10 py-2">
             <DialogTitle className="flex items-center">
               <div 
                 className="w-3 h-3 rounded-full mr-2" 
@@ -205,7 +205,7 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
           </DialogHeader>
 
           <Tabs defaultValue="details">
-            <TabsList className="w-full">
+            <TabsList className="w-full sticky top-12 bg-white z-10">
               <TabsTrigger value="details">Details</TabsTrigger>
               <TabsTrigger value="subtasks">Subtasks</TabsTrigger>
               <TabsTrigger value="notes">Notes</TabsTrigger>
@@ -430,33 +430,35 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
               )}
             </TabsContent>
             
-            {/* Notes Tab with Hover Cards */}
+            {/* Notes Tab with Hover Cards - Fixed */}
             <TabsContent value="notes" className="space-y-4 pt-4">
               {task.notes.length > 0 ? (
-                <div className="space-y-3">
-                  {task.notes.map(note => (
-                    <HoverCard key={note.id}>
-                      <HoverCardTrigger asChild>
-                        <div className="p-3 bg-gray-50 rounded-md cursor-pointer">
-                          <p className="text-sm line-clamp-2">{note.content}</p>
-                          <div className="text-xs text-gray-500 mt-2 flex justify-between">
-                            <span>{note.author}</span>
-                            <span>{format(new Date(note.createdAt), 'MMM d, yyyy')}</span>
+                <ScrollArea className="max-h-[400px] pr-4">
+                  <div className="space-y-3">
+                    {task.notes.map(note => (
+                      <HoverCard key={note.id} openDelay={100} closeDelay={200}>
+                        <HoverCardTrigger asChild>
+                          <div className="p-3 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors cursor-pointer relative">
+                            <p className="text-sm line-clamp-2">{note.content}</p>
+                            <div className="text-xs text-gray-500 mt-2 flex justify-between">
+                              <span>{note.author}</span>
+                              <span>{format(new Date(note.createdAt), 'MMM d, yyyy')}</span>
+                            </div>
                           </div>
-                        </div>
-                      </HoverCardTrigger>
-                      <HoverCardContent className="w-80">
-                        <div className="space-y-2">
-                          <p className="text-sm">{note.content}</p>
-                          <div className="text-xs text-gray-500 flex justify-between">
-                            <span>By: {note.author}</span>
-                            <span>{format(new Date(note.createdAt), 'MMM d, yyyy HH:mm')}</span>
+                        </HoverCardTrigger>
+                        <HoverCardContent side="right" align="start" className="w-80 p-4 shadow-lg border-gray-200 z-50">
+                          <div className="space-y-2">
+                            <p className="text-sm whitespace-pre-wrap">{note.content}</p>
+                            <div className="text-xs text-gray-500 flex justify-between pt-2 border-t">
+                              <span>By: {note.author}</span>
+                              <span>{format(new Date(note.createdAt), 'MMM d, yyyy HH:mm')}</span>
+                            </div>
                           </div>
-                        </div>
-                      </HoverCardContent>
-                    </HoverCard>
-                  ))}
-                </div>
+                        </HoverCardContent>
+                      </HoverCard>
+                    ))}
+                  </div>
+                </ScrollArea>
               ) : (
                 <div className="text-center py-8 text-gray-500">
                   No notes yet
@@ -602,7 +604,7 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
       
       {/* Reassign Task Dialog */}
       <Dialog open={reassignDialogOpen} onOpenChange={setReassignDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md" style={{ position: 'fixed', top: '50%', transform: 'translateX(-50%) translateY(-50%)', left: '50%' }}>
           <DialogHeader>
             <DialogTitle>Reassign Task</DialogTitle>
           </DialogHeader>

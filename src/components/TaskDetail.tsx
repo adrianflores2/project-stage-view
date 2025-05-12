@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Task, SubTask } from '@/types';
 import { useAppContext } from '@/context/AppContext';
@@ -35,6 +34,12 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { 
+  HoverCard,
+  HoverCardTrigger,
+  HoverCardContent
+} from '@/components/ui/hover-card';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface TaskDetailProps {
   task: Task;
@@ -425,18 +430,31 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
               )}
             </TabsContent>
             
-            {/* Notes Tab */}
+            {/* Notes Tab with Hover Cards */}
             <TabsContent value="notes" className="space-y-4 pt-4">
               {task.notes.length > 0 ? (
                 <div className="space-y-3">
                   {task.notes.map(note => (
-                    <div key={note.id} className="p-3 bg-gray-50 rounded-md">
-                      <p className="text-sm">{note.content}</p>
-                      <div className="text-xs text-gray-500 mt-2 flex justify-between">
-                        <span>{note.author}</span>
-                        <span>{format(new Date(note.createdAt), 'MMM d, yyyy')}</span>
-                      </div>
-                    </div>
+                    <HoverCard key={note.id}>
+                      <HoverCardTrigger asChild>
+                        <div className="p-3 bg-gray-50 rounded-md cursor-pointer">
+                          <p className="text-sm line-clamp-2">{note.content}</p>
+                          <div className="text-xs text-gray-500 mt-2 flex justify-between">
+                            <span>{note.author}</span>
+                            <span>{format(new Date(note.createdAt), 'MMM d, yyyy')}</span>
+                          </div>
+                        </div>
+                      </HoverCardTrigger>
+                      <HoverCardContent className="w-80">
+                        <div className="space-y-2">
+                          <p className="text-sm">{note.content}</p>
+                          <div className="text-xs text-gray-500 flex justify-between">
+                            <span>By: {note.author}</span>
+                            <span>{format(new Date(note.createdAt), 'MMM d, yyyy HH:mm')}</span>
+                          </div>
+                        </div>
+                      </HoverCardContent>
+                    </HoverCard>
                   ))}
                 </div>
               ) : (

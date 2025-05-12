@@ -27,6 +27,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Check, Plus, User as UserIcon } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface UserManagementDialogProps {
   open: boolean;
@@ -58,9 +59,12 @@ const UserManagement = ({ open, onOpenChange }: UserManagementDialogProps) => {
     setRole('worker');
   };
 
-  // Admin users and coordinators can manage users
-  const canManageUsers = currentUser?.role === 'coordinator' || currentUser?.role === 'admin';
-  const workerUsers = users.filter(u => u.role === 'worker');
+  // Admin users, coordinators and supervisors can manage users
+  const canManageUsers = currentUser?.role === 'coordinator' || currentUser?.role === 'supervisor' || currentUser?.role === 'admin';
+  // Get filtered users - for supervisors show all except admin, for others show lower privilege level users
+  const filteredUsers = currentUser?.role === 'supervisor' 
+    ? users.filter(u => u.role !== 'admin')
+    : users;
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -134,44 +138,46 @@ const UserManagement = ({ open, onOpenChange }: UserManagementDialogProps) => {
           <div>
             <h3 className="text-lg font-medium mb-4">Users List</h3>
             <div className="border rounded-md overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
-                    {canManageUsers && <TableHead className="w-[100px]">Actions</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users.map(user => (
-                    <TableRow key={user.id}>
-                      <TableCell>{user.name}</TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>
-                        <span className="capitalize">{user.role}</span>
-                      </TableCell>
-                      {canManageUsers && (
-                        <TableCell>
-                          {/* Only allow removing workers or users with lower privilege levels */}
-                          {((user.role === 'worker' || 
-                             (user.role === 'coordinator' && currentUser?.role === 'admin') || 
-                             (user.role === 'supervisor' && currentUser?.role === 'admin')) && 
-                             user.id !== currentUser?.id) && (
-                            <Button 
-                              variant="destructive" 
-                              size="sm" 
-                              onClick={() => removeUser(user.id)}
-                            >
-                              Remove
-                            </Button>
-                          )}
-                        </TableCell>
-                      )}
+              <ScrollArea className="h-[400px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Role</TableHead>
+                      {canManageUsers && <TableHead className="w-[100px]">Actions</TableHead>}
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUsers.map(user => (
+                      <TableRow key={user.id}>
+                        <TableCell>{user.name}</TableCell>
+                        <TableCell>{user.email}</TableCell>
+                        <TableCell>
+                          <span className="capitalize">{user.role}</span>
+                        </TableCell>
+                        {canManageUsers && (
+                          <TableCell>
+                            {/* Only allow removing workers or users with lower privilege levels */}
+                            {((user.role === 'worker' || 
+                               (user.role === 'coordinator' && (currentUser?.role === 'admin' || currentUser?.role === 'supervisor')) || 
+                               (user.role === 'supervisor' && currentUser?.role === 'admin')) && 
+                               user.id !== currentUser?.id) && (
+                              <Button 
+                                variant="destructive" 
+                                size="sm" 
+                                onClick={() => removeUser(user.id)}
+                              >
+                                Remove
+                              </Button>
+                            )}
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
             </div>
           </div>
         </div>

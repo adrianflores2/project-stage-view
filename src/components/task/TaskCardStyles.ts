@@ -53,3 +53,19 @@ export const getDueColor = (daysRemaining: number | null) => {
   if (daysRemaining <= 2) return 'text-yellow-600 font-medium';
   return 'text-green-600 font-medium';
 };
+
+// Get task border style based on status
+export const getTaskBorderStyle = (status: string) => {
+  switch (status) {
+    case 'in-progress': return 'border-2 border-blue-400';
+    default: return 'border border-gray-200';
+  }
+};
+
+// Format days left message
+export const formatDaysLeft = (daysRemaining: number | null) => {
+  if (daysRemaining === null) return '';
+  if (daysRemaining === 0) return 'Due today';
+  if (daysRemaining < 0) return `${Math.abs(daysRemaining)} ${Math.abs(daysRemaining) === 1 ? 'day' : 'days'} overdue`;
+  return `${daysRemaining} ${daysRemaining === 1 ? 'day' : 'days'} left`;
+};

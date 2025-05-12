@@ -7,9 +7,10 @@ import { getDaysRemaining, getDueColor, formatDaysLeft } from './TaskCardStyles'
 interface TaskDateProps {
   dueDate?: string | Date;
   showDaysLeft?: boolean;
+  status?: string;
 }
 
-const TaskDate = ({ dueDate, showDaysLeft = false }: TaskDateProps) => {
+const TaskDate = ({ dueDate, showDaysLeft = false, status }: TaskDateProps) => {
   // Convert to string format if it's a Date object
   const dueDateString = dueDate ? (dueDate instanceof Date ? dueDate.toISOString() : dueDate) : undefined;
   
@@ -21,11 +22,13 @@ const TaskDate = ({ dueDate, showDaysLeft = false }: TaskDateProps) => {
   const daysRemaining = getDaysRemaining(dueDateString);
   const dueColor = getDueColor(daysRemaining);
   
-  if (showDaysLeft && daysRemaining !== null) {
+  // Show days left for in-progress tasks if requested
+  if (showDaysLeft && daysRemaining !== null && status === 'in-progress') {
     return (
-      <div className={`flex items-center text-xs ${dueColor}`}>
+      <div className="flex items-center text-xs">
         <Clock size={12} className="mr-1" />
-        <span>{formatDaysLeft(daysRemaining)}</span>
+        <span className={dueColor}>{formatDaysLeft(daysRemaining)}</span>
+        <span className="text-gray-500 ml-1">({formattedDate})</span>
       </div>
     );
   }

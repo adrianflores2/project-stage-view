@@ -3,16 +3,12 @@ import React, { useState } from 'react';
 import { Task } from '@/types';
 import { useAppContext } from '@/context/AppContext';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Clock, List, MessageSquare, User } from 'lucide-react';
+import { List, MessageSquare, User } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { format } from 'date-fns';
 import { 
   getBackgroundTint, 
   priorityColors, 
-  getDaysRemaining, 
-  getDueColor,
-  getTaskBorderStyle,
-  formatDaysLeft
+  getTaskBorderStyle
 } from './TaskCardStyles';
 import TaskBadge from './TaskBadge';
 import TaskProgress from './TaskProgress';
@@ -32,8 +28,6 @@ const TaskGridCard = ({ task, projectColor, showMinimalInfo = false }: TaskGridC
   const [isHovered, setIsHovered] = useState(false);
   
   const assignedUser = getUserById(task.assignedTo || task.assigned_to || '');
-  const daysRemaining = getDaysRemaining(task.dueDate || task.due_date);
-  const dueColor = getDueColor(daysRemaining);
   
   // Handler to open details
   const handleOpenDetails = () => {
@@ -71,13 +65,13 @@ const TaskGridCard = ({ task, projectColor, showMinimalInfo = false }: TaskGridC
               </div>
             )}
             
+            {/* Due date */}
+            <TaskDate dueDate={task.dueDate || task.due_date} status={task.status} />
+            
             {/* Completed Date */}
             {(task.completedDate || task.completed_date) && (
               <div className="text-xs text-gray-500">
-                <span className="font-medium">Completed:</span> {format(
-                  new Date(task.completedDate || task.completed_date!), 
-                  'MMM d, yyyy'
-                )}
+                <span className="font-medium">Completed:</span> {task.completedDate || task.completed_date ? new Date(task.completedDate || task.completed_date!).toLocaleDateString() : ''}
               </div>
             )}
             
@@ -98,7 +92,7 @@ const TaskGridCard = ({ task, projectColor, showMinimalInfo = false }: TaskGridC
             {isHovered && task.notes.length > 0 && (
               <div className="mt-2 text-xs border-t border-gray-200 pt-1">
                 <div className="font-medium text-gray-500">Latest note:</div>
-                <div className="text-gray-600 mt-0.5 line-clamp-2">{task.notes[0].content}</div>
+                <div className="text-gray-600 mt-0.5 line-clamp-2 bg-white p-1 rounded">{task.notes[0].content}</div>
               </div>
             )}
           </CardContent>
@@ -148,13 +142,12 @@ const TaskGridCard = ({ task, projectColor, showMinimalInfo = false }: TaskGridC
             )}
           </div>
           
-          {/* Days remaining for in-progress tasks */}
-          {task.status === 'in-progress' && daysRemaining !== null && (
-            <div className={`flex items-center text-xs ${dueColor}`}>
-              <Clock size={12} className="mr-1" />
-              <span>{formatDaysLeft(daysRemaining)}</span>
-            </div>
-          )}
+          {/* Due date */}
+          <TaskDate 
+            dueDate={task.dueDate || task.due_date} 
+            showDaysLeft={true} 
+            status={task.status} 
+          />
           
           {/* Progress bar */}
           <TaskProgress progress={task.progress} status={task.status} />
@@ -195,11 +188,11 @@ const TaskGridCard = ({ task, projectColor, showMinimalInfo = false }: TaskGridC
             <SubtasksList subtasks={task.subtasks} className="mt-1" />
           )}
           
-          {/* Latest note - visible on hover */}
+          {/* Latest note - visible on hover with white background */}
           {isHovered && task.notes.length > 0 && (
             <div className="mt-2 text-xs border-t border-gray-200 pt-1">
               <div className="font-medium text-gray-500">Latest note:</div>
-              <div className="text-gray-600 mt-0.5 line-clamp-2">{task.notes[0].content}</div>
+              <div className="text-gray-600 mt-0.5 line-clamp-2 bg-white p-1 rounded">{task.notes[0].content}</div>
             </div>
           )}
         </CardContent>

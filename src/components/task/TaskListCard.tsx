@@ -2,20 +2,17 @@
 import React, { useState } from 'react';
 import { Task } from '@/types';
 import { useAppContext } from '@/context/AppContext';
-import { List, MessageSquare, User, Clock } from 'lucide-react';
+import { List, MessageSquare, User } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { format } from 'date-fns';
 import { 
   getBackgroundTint, 
   priorityColors, 
-  getDaysRemaining,
-  getDueColor,
-  getTaskBorderStyle,
-  formatDaysLeft
+  getTaskBorderStyle
 } from './TaskCardStyles';
 import TaskBadge from './TaskBadge';
 import SubtasksList from './SubtasksList';
 import TaskDetail from '../TaskDetail';
+import TaskDate from './TaskDate';
 
 interface TaskListCardProps {
   task: Task;
@@ -29,8 +26,6 @@ const TaskListCard = ({ task, projectColor, showMinimalInfo = false }: TaskListC
   const [isHovered, setIsHovered] = useState(false);
   
   const assignedUser = getUserById(task.assignedTo || task.assigned_to || '');
-  const daysRemaining = getDaysRemaining(task.dueDate || task.due_date);
-  const dueColor = getDueColor(daysRemaining);
   
   // Handler to open details
   const handleOpenDetails = () => {
@@ -64,8 +59,13 @@ const TaskListCard = ({ task, projectColor, showMinimalInfo = false }: TaskListC
                 
                 <div className="mx-2">|</div>
                 
+                {/* Due date */}
+                <TaskDate dueDate={task.dueDate || task.due_date} status={task.status} />
+                
+                <div className="mx-2">|</div>
+                
                 {/* Completed Date */}
-                <span>Completed: {format(new Date(task.completedDate || task.completed_date!), 'MMM d, yyyy')}</span>
+                <span>Completed: {task.completedDate || task.completed_date ? new Date(task.completedDate || task.completed_date!).toLocaleDateString() : ''}</span>
                 
                 {task.subtasks.length > 0 && (
                   <>
@@ -86,11 +86,11 @@ const TaskListCard = ({ task, projectColor, showMinimalInfo = false }: TaskListC
                 <SubtasksList subtasks={task.subtasks} className="mt-1 space-y-1" />
               )}
               
-              {/* Latest note on hover */}
+              {/* Latest note on hover with white background */}
               {task.notes.length > 0 && (
                 <div className="mt-2 text-xs border-t border-gray-200 pt-1">
                   <div className="font-medium text-gray-500">Latest note:</div>
-                  <div className="text-gray-600 mt-0.5 line-clamp-2">{task.notes[0].content}</div>
+                  <div className="text-gray-600 mt-0.5 line-clamp-2 bg-white p-1 rounded">{task.notes[0].content}</div>
                 </div>
               )}
             </div>
@@ -137,18 +137,12 @@ const TaskListCard = ({ task, projectColor, showMinimalInfo = false }: TaskListC
               
               <div className="mx-2">|</div>
               
-              {/* Days left for in-progress tasks */}
-              {task.status === 'in-progress' && daysRemaining !== null ? (
-                <span className={dueColor}>
-                  <Clock size={12} className="mr-1 inline" />
-                  {formatDaysLeft(daysRemaining)}
-                </span>
-              ) : (
-                <span>
-                  <Clock size={12} className="mr-1 inline" />
-                  {task.dueDate || task.due_date ? format(new Date(task.dueDate || task.due_date), 'MMM d') : 'No due date'}
-                </span>
-              )}
+              {/* Due date - show days left for in-progress tasks */}
+              <TaskDate 
+                dueDate={task.dueDate || task.due_date} 
+                showDaysLeft={true}
+                status={task.status}
+              />
               
               {task.subtasks.length > 0 && (
                 <>
@@ -197,11 +191,11 @@ const TaskListCard = ({ task, projectColor, showMinimalInfo = false }: TaskListC
               <SubtasksList subtasks={task.subtasks} className="mt-1 space-y-1" />
             )}
             
-            {/* Latest note on hover */}
+            {/* Latest note on hover with white background */}
             {task.notes.length > 0 && (
               <div className="mt-2 text-xs border-t border-gray-200 pt-1">
                 <div className="font-medium text-gray-500">Latest note:</div>
-                <div className="text-gray-600 mt-0.5 line-clamp-2">{task.notes[0].content}</div>
+                <div className="text-gray-600 mt-0.5 line-clamp-2 bg-white p-1 rounded">{task.notes[0].content}</div>
               </div>
             )}
           </div>

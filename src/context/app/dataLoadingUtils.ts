@@ -1,3 +1,4 @@
+
 import { User, Task, Project, Report, SubTask } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -77,6 +78,13 @@ export async function processTasksResponse(tasksData: any[]): Promise<Task[]> {
       content: note.content,
       author: note.users?.name || 'Unknown',
       createdAt: note.created_at
+    });
+  });
+  
+  // Sort notes by creation date (newest first)
+  Object.keys(notesByTask).forEach(taskId => {
+    notesByTask[taskId].sort((a, b) => {
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
   });
   

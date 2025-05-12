@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { useAppContext } from '@/context/AppContext';
-import { format, isToday, isYesterday, subDays, isSameDay, parseISO } from 'date-fns';
+import { format, isToday, isYesterday, subDays, parseISO } from 'date-fns';
 import { 
   Card, 
   CardContent, 
@@ -34,7 +34,9 @@ const DailyActivity = () => {
     // Ensure we're working with a Date object by using parseISO for string dates
     const completedDate = task.completedDate instanceof Date 
       ? task.completedDate 
-      : parseISO(task.completedDate.toString());
+      : typeof task.completedDate === 'string'
+        ? parseISO(task.completedDate)
+        : new Date(task.completedDate as any); // Fallback to handle other cases
     
     switch(selectedDate) {
       case 'today':
@@ -56,7 +58,9 @@ const DailyActivity = () => {
     // Ensure we're working with a Date object
     const completedDate = task.completedDate instanceof Date 
       ? task.completedDate 
-      : parseISO(task.completedDate.toString());
+      : typeof task.completedDate === 'string'
+        ? parseISO(task.completedDate)
+        : new Date(task.completedDate as any); // Fallback to handle other cases
     
     const dateStr = format(completedDate, 'yyyy-MM-dd');
     
@@ -154,7 +158,9 @@ const DailyActivity = () => {
                             Completed at: {format(
                               task.completedDate instanceof Date 
                                 ? task.completedDate 
-                                : parseISO(task.completedDate.toString()), 
+                                : typeof task.completedDate === 'string'
+                                  ? parseISO(task.completedDate)
+                                  : new Date(task.completedDate as any),
                               'h:mm a'
                             )}
                           </div>

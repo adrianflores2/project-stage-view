@@ -1,4 +1,3 @@
-
 import { Task } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/sonner';
@@ -13,8 +12,7 @@ export function useNoteOperations(
       // Validate that task exists
       const taskIndex = tasks.findIndex(t => t.id === taskId);
       if (taskIndex === -1) {
-        toast({
-          title: "Task not found",
+        toast("Task not found", {
           description: "Cannot add note to non-existent task",
           variant: "destructive"
         });
@@ -23,8 +21,7 @@ export function useNoteOperations(
       
       // Ensure current user exists
       if (!currentUser) {
-        toast({
-          title: "User not found",
+        toast("User not found", {
           description: "You must be logged in to add notes",
           variant: "destructive"
         });
@@ -69,14 +66,12 @@ export function useNoteOperations(
       updatedTasks[taskIndex] = updatedTask;
       setTasksList(updatedTasks);
       
-      toast({
-        title: "Note added",
+      toast("Note added", {
         description: "Your note has been added"
       });
     } catch (error: any) {
       console.error("Error adding note:", error);
-      toast({
-        title: "Failed to add note",
+      toast("Failed to add note", {
         description: error.message,
         variant: "destructive"
       });

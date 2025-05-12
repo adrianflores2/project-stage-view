@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { User, Task, Project, Report, SubTask } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
@@ -144,15 +143,13 @@ export function useDataLoading(
       setReportsList(reports);
       setDataLoaded(true);
       
-      toast({
-        title: "Data loaded successfully",
+      toast("Data loaded successfully", {
         description: `Loaded ${users.length} users, ${projects.length} projects, and ${tasks.length} tasks`
       });
       
     } catch (error) {
       console.error("Error loading data:", error);
-      toast({
-        title: "Data loading error",
+      toast("Data loading error", {
         description: "Failed to load data from the database. Please try refreshing the page.",
         variant: "destructive"
       });

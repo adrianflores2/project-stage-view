@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/sonner';
@@ -105,7 +106,7 @@ export function useAuthOperations(
     setCurrentUser(null);
     setIsAuthenticated(false);
     localStorage.removeItem('currentUser');
-    toast("Logged out", {
+    toast.success("Logged out", {
       description: "You have been successfully logged out."
     });
   };

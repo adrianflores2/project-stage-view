@@ -12,18 +12,16 @@ export function useNoteOperations(
       // Validate that task exists
       const taskIndex = tasks.findIndex(t => t.id === taskId);
       if (taskIndex === -1) {
-        toast("Task not found", {
-          description: "Cannot add note to non-existent task",
-          variant: "destructive"
+        toast.error("Task not found", {
+          description: "Cannot add note to non-existent task"
         });
         return;
       }
       
       // Ensure current user exists
       if (!currentUser) {
-        toast("User not found", {
-          description: "You must be logged in to add notes",
-          variant: "destructive"
+        toast.error("User not found", {
+          description: "You must be logged in to add notes"
         });
         return;
       }
@@ -66,14 +64,13 @@ export function useNoteOperations(
       updatedTasks[taskIndex] = updatedTask;
       setTasksList(updatedTasks);
       
-      toast("Note added", {
+      toast.success("Note added", {
         description: "Your note has been added"
       });
     } catch (error: any) {
       console.error("Error adding note:", error);
-      toast("Failed to add note", {
-        description: error.message,
-        variant: "destructive"
+      toast.error("Failed to add note", {
+        description: error.message
       });
     }
   };

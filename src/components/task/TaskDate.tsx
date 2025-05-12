@@ -24,12 +24,6 @@ const TaskDate = ({ dueDate }: TaskDateProps) => {
     <div className="flex items-center text-xs text-gray-500">
       <Clock size={12} className="mr-1" />
       <span>{formattedDate}</span>
-      
-      {daysRemaining !== null && (
-        <span className={`ml-1 ${dueColor}`}>
-          ({daysRemaining} {daysRemaining === 1 ? 'day' : 'days'} left)
-        </span>
-      )}
     </div>
   );
 };

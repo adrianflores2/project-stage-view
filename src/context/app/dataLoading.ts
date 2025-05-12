@@ -1,7 +1,8 @@
 
+import { useState } from 'react';
 import { User, Task, Project, Report, SubTask } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from '@/components/ui/sonner';
 import { 
   processUsersResponse,
   processProjectsResponse, 
@@ -16,8 +17,6 @@ export function useDataLoading(
   setReportsList: React.Dispatch<React.SetStateAction<Report[]>>,
   setDataLoaded: React.Dispatch<React.SetStateAction<boolean>>
 ) {
-  const { toast } = useToast();
-  
   const loadInitialData = async () => {
     try {
       console.log("Starting to load initial data...");

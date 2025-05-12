@@ -1,15 +1,13 @@
 
 import { Task } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from '@/components/ui/sonner';
 
 export function useNoteOperations(
   tasks: Task[],
   setTasksList: React.Dispatch<React.SetStateAction<Task[]>>,
   currentUser: any
 ) {
-  const { toast } = useToast();
-  
   const addNote = async (taskId: string, content: string) => {
     try {
       // Validate that task exists

@@ -13,8 +13,10 @@ import { useReportOperations } from './app/reportOperations';
 import { useDataLoading } from './app/dataLoading';
 import { useAuthOperations } from './app/authOperations';
 
+// Create the AppContext with a default undefined value
 const AppContext = createContext<AppContextProps | undefined>(undefined);
 
+// Separate function to use hooks within the AppProvider component
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   // Initialize with empty arrays
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -25,7 +27,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
   
-  // Import utility hooks
+  // Use the custom hooks within the component body
   const { loadInitialData } = useDataLoading(
     setUsersList, 
     setTasksList, 

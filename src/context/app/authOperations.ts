@@ -1,6 +1,7 @@
 
+import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from '@/components/ui/sonner';
 import { User } from '@/types';
 
 export function useAuthOperations(
@@ -9,9 +10,7 @@ export function useAuthOperations(
   loadInitialData: () => Promise<void>,
   users: User[]
 ) {
-  const { toast } = useToast();
-  
-  // Supabase login
+  // Login function implementation
   const login = async (email: string, password: string) => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -101,6 +100,7 @@ export function useAuthOperations(
     }
   };
   
+  // Logout function implementation
   const logout = async () => {
     await supabase.auth.signOut();
     setCurrentUser(null);

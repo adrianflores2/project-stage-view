@@ -13,7 +13,10 @@ const TaskDate = ({ dueDate }: TaskDateProps) => {
   const dueDateString = dueDate ? (dueDate instanceof Date ? dueDate.toISOString() : dueDate) : undefined;
   
   // Format date with local time
-  const formattedDate = dueDateString ? format(new Date(dueDateString), 'dd MMM, HH:mm') : 'No due date';
+  const formattedDate = dueDateString 
+    ? format(new Date(dueDateString), 'dd MMM, HH:mm') 
+    : 'No due date';
+    
   const daysRemaining = getDaysRemaining(dueDateString);
   const dueColor = getDueColor(daysRemaining);
   

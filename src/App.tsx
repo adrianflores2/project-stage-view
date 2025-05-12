@@ -14,8 +14,8 @@ import InProgress from '@/pages/InProgress';
 import Reports from '@/pages/Reports';
 import DailyActivity from '@/pages/DailyActivity';
 
-// Import Toast
-import { Toaster } from '@/components/ui/toaster';
+// Import Sonner Toast instead of Shadcn Toast
+import { Toaster } from '@/components/ui/sonner';
 import { useAppContext } from './context/AppContext';
 
 // MainContent component that uses the AppContext
@@ -45,15 +45,15 @@ function MainContentWithAuth() {
   );
 }
 
-// App component that doesn't directly use AppContext
+// App component that wraps everything in the ThemeProvider
 function App() {
   return (
-    <ThemeProvider defaultTheme="light" storageKey="task-manager-theme">
-      <AppProvider>
+    <AppProvider>
+      <ThemeProvider defaultTheme="light" storageKey="task-manager-theme">
         <MainContentWithAuth />
         <Toaster />
-      </AppProvider>
-    </ThemeProvider>
+      </ThemeProvider>
+    </AppProvider>
   );
 }
 

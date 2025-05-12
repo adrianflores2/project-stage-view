@@ -34,6 +34,9 @@ const TaskGridCard = ({ task, projectColor, showMinimalInfo = false }: TaskGridC
     setShowDetailDialog(true);
   };
   
+  // Get the latest note (notes are already sorted in dataLoadingUtils.ts)
+  const latestNote = task.notes && task.notes.length > 0 ? task.notes[0] : null;
+  
   // For completed tasks with minimal info
   if (showMinimalInfo && task.status === 'completed') {
     return (
@@ -88,11 +91,11 @@ const TaskGridCard = ({ task, projectColor, showMinimalInfo = false }: TaskGridC
               <SubtasksList subtasks={task.subtasks} className="mt-1" />
             )}
             
-            {/* Latest note - visible on hover */}
-            {isHovered && task.notes.length > 0 && (
+            {/* Latest note - visible on hover with white background */}
+            {isHovered && latestNote && (
               <div className="mt-2 text-xs border-t border-gray-200 pt-1">
                 <div className="font-medium text-gray-500">Latest note:</div>
-                <div className="text-gray-600 mt-0.5 line-clamp-2 bg-white p-1 rounded">{task.notes[0].content}</div>
+                <div className="text-gray-600 mt-0.5 line-clamp-2 bg-white p-1 rounded">{latestNote.content}</div>
               </div>
             )}
           </CardContent>
@@ -189,10 +192,10 @@ const TaskGridCard = ({ task, projectColor, showMinimalInfo = false }: TaskGridC
           )}
           
           {/* Latest note - visible on hover with white background */}
-          {isHovered && task.notes.length > 0 && (
+          {isHovered && latestNote && (
             <div className="mt-2 text-xs border-t border-gray-200 pt-1">
               <div className="font-medium text-gray-500">Latest note:</div>
-              <div className="text-gray-600 mt-0.5 line-clamp-2 bg-white p-1 rounded">{task.notes[0].content}</div>
+              <div className="text-gray-600 mt-0.5 line-clamp-2 bg-white p-1 rounded">{latestNote.content}</div>
             </div>
           )}
         </CardContent>

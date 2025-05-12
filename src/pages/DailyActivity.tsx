@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { useAppContext } from '@/context/AppContext';
-import { format, isToday, isYesterday, subDays, isSameDay } from 'date-fns';
+import { format, isToday, isYesterday, subDays, isSameDay, parseISO } from 'date-fns';
 import { 
   Card, 
   CardContent, 
@@ -31,7 +31,10 @@ const DailyActivity = () => {
   const filteredTasks = completedTasks.filter(task => {
     if (!task.completedDate) return false;
     
-    const completedDate = new Date(task.completedDate);
+    // Ensure we're working with a Date object by using parseISO for string dates
+    const completedDate = task.completedDate instanceof Date 
+      ? task.completedDate 
+      : parseISO(task.completedDate.toString());
     
     switch(selectedDate) {
       case 'today':
@@ -50,7 +53,12 @@ const DailyActivity = () => {
   const tasksByDate = filteredTasks.reduce<Record<string, Task[]>>((groups, task) => {
     if (!task.completedDate) return groups;
     
-    const dateStr = format(new Date(task.completedDate), 'yyyy-MM-dd');
+    // Ensure we're working with a Date object
+    const completedDate = task.completedDate instanceof Date 
+      ? task.completedDate 
+      : parseISO(task.completedDate.toString());
+    
+    const dateStr = format(completedDate, 'yyyy-MM-dd');
     
     if (!groups[dateStr]) {
       groups[dateStr] = [];
@@ -143,7 +151,12 @@ const DailyActivity = () => {
                         
                         {task.completedDate && (
                           <div className="text-xs text-gray-500 mt-2">
-                            Completed at: {format(new Date(task.completedDate), 'h:mm a')}
+                            Completed at: {format(
+                              task.completedDate instanceof Date 
+                                ? task.completedDate 
+                                : parseISO(task.completedDate.toString()), 
+                              'h:mm a'
+                            )}
                           </div>
                         )}
                       </CardContent>

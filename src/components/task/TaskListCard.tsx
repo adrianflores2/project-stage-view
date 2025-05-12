@@ -32,6 +32,9 @@ const TaskListCard = ({ task, projectColor, showMinimalInfo = false }: TaskListC
     setShowDetailDialog(true);
   };
   
+  // Get the latest note (notes are already sorted in dataLoadingUtils.ts)
+  const latestNote = task.notes && task.notes.length > 0 ? task.notes[0] : null;
+  
   // For completed tasks with minimal info
   if (showMinimalInfo && task.status === 'completed') {
     return (
@@ -87,10 +90,10 @@ const TaskListCard = ({ task, projectColor, showMinimalInfo = false }: TaskListC
               )}
               
               {/* Latest note on hover with white background */}
-              {task.notes.length > 0 && (
+              {latestNote && (
                 <div className="mt-2 text-xs border-t border-gray-200 pt-1">
                   <div className="font-medium text-gray-500">Latest note:</div>
-                  <div className="text-gray-600 mt-0.5 line-clamp-2 bg-white p-1 rounded">{task.notes[0].content}</div>
+                  <div className="text-gray-600 mt-0.5 line-clamp-2 bg-white p-1 rounded">{latestNote.content}</div>
                 </div>
               )}
             </div>
@@ -192,10 +195,10 @@ const TaskListCard = ({ task, projectColor, showMinimalInfo = false }: TaskListC
             )}
             
             {/* Latest note on hover with white background */}
-            {task.notes.length > 0 && (
+            {latestNote && (
               <div className="mt-2 text-xs border-t border-gray-200 pt-1">
                 <div className="font-medium text-gray-500">Latest note:</div>
-                <div className="text-gray-600 mt-0.5 line-clamp-2 bg-white p-1 rounded">{task.notes[0].content}</div>
+                <div className="text-gray-600 mt-0.5 line-clamp-2 bg-white p-1 rounded">{latestNote.content}</div>
               </div>
             )}
           </div>

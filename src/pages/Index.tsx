@@ -3,12 +3,14 @@ import { useEffect, useState } from 'react';
 import ProjectBoard from '@/components/ProjectBoard';
 import { useAppContext } from '@/context/AppContext';
 import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { RefreshCw } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
-import FloatingRefreshButton from '@/components/FloatingRefreshButton';
 
 const Index = () => {
   const { currentUser, loadInitialData, dataLoaded } = useAppContext();
   const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Ensure data is loaded just once
   useEffect(() => {
@@ -20,6 +22,20 @@ const Index = () => {
       });
     }
   }, [currentUser, loadInitialData, dataLoaded, isLoading]);
+  
+  // Handle manual data refresh
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await loadInitialData();
+      toast.success("Data refreshed successfully");
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+      toast.error("Failed to refresh data");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
   
   // Setup realtime subscriptions for tables
   useEffect(() => {
@@ -149,8 +165,19 @@ const Index = () => {
   
   return (
     <>
+      <div className="flex justify-end p-4 pb-0">
+        <Button 
+          size="sm" 
+          variant="outline" 
+          onClick={handleRefresh} 
+          disabled={isRefreshing}
+          className="flex items-center gap-2"
+        >
+          <RefreshCw size={16} className={isRefreshing ? "animate-spin" : ""} />
+          {isRefreshing ? "Refreshing..." : "Refresh data"}
+        </Button>
+      </div>
       <ProjectBoard />
-      <FloatingRefreshButton />
     </>
   );
 };

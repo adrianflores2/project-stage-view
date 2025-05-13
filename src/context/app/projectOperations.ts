@@ -1,3 +1,4 @@
+
 import { Project } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
@@ -10,16 +11,12 @@ export function useProjectOperations(
   
   const addProject = async (project: Omit<Project, 'id'>) => {
     try {
-      // Get the highest display_order value
-      const highestOrder = Math.max(...projects.map(p => p.display_order || 0), 0);
-      
       // Insert project in Supabase
       const { data: newProject, error } = await supabase
         .from('projects')
         .insert({
           name: project.name,
-          color: project.color,
-          display_order: highestOrder + 1 // Set new project at the end
+          color: project.color
         })
         .select()
         .single();
@@ -44,8 +41,7 @@ export function useProjectOperations(
       // Add to state with stages
       const projectWithStages = {
         ...newProject,
-        stages: project.stages || [],
-        display_order: highestOrder + 1
+        stages: project.stages || []
       };
       
       setProjectsList(prev => [...prev, projectWithStages]);
@@ -71,8 +67,7 @@ export function useProjectOperations(
         .from('projects')
         .update({
           name: updatedProject.name,
-          color: updatedProject.color,
-          display_order: updatedProject.display_order || 0
+          color: updatedProject.color
         })
         .eq('id', updatedProject.id);
         
@@ -150,76 +145,6 @@ export function useProjectOperations(
   const getProjectById = (id: string) => {
     return projects.find(project => project.id === id);
   };
-  
-  const updateProjectOrder = async (projectId: string, direction: 'up' | 'down') => {
-    try {
-      // Find the project to move
-      const projectIndex = projects.findIndex(p => p.id === projectId);
-      if (projectIndex === -1) throw new Error("Project not found");
-      
-      // Create ordered list of projects
-      const orderedProjects = [...projects].sort((a, b) => 
-        (a.display_order || 0) - (b.display_order || 0)
-      );
-      
-      // Find the index in the ordered list
-      const orderedIndex = orderedProjects.findIndex(p => p.id === projectId);
-      
-      // Can't move first project up or last project down
-      if ((direction === 'up' && orderedIndex === 0) || 
-          (direction === 'down' && orderedIndex === orderedProjects.length - 1)) {
-        return;
-      }
-      
-      // Get the project to swap with
-      const swapIndex = direction === 'up' ? orderedIndex - 1 : orderedIndex + 1;
-      const projectToMove = orderedProjects[orderedIndex];
-      const projectToSwap = orderedProjects[swapIndex];
-      
-      // Swap display orders
-      const tempOrder = projectToMove.display_order || 0;
-      projectToMove.display_order = projectToSwap.display_order || 0;
-      projectToSwap.display_order = tempOrder;
-      
-      // Update both projects in database
-      const { supabase } = await import('@/integrations/supabase/client');
-      
-      const updates = [
-        supabase.from('projects')
-          .update({ display_order: projectToMove.display_order })
-          .eq('id', projectToMove.id),
-          
-        supabase.from('projects')
-          .update({ display_order: projectToSwap.display_order })
-          .eq('id', projectToSwap.id)
-      ];
-      
-      await Promise.all(updates);
-      
-      // Update local state with new ordering
-      setProjectsList([...projects.map(p => {
-        if (p.id === projectToMove.id) {
-          return {...p, display_order: projectToMove.display_order};
-        } else if (p.id === projectToSwap.id) {
-          return {...p, display_order: projectToSwap.display_order};
-        }
-        return p;
-      })]);
-      
-      toast({
-        title: "Proyectos reordenados",
-        description: `El orden de los proyectos ha sido actualizado`
-      });
-      
-    } catch (error: any) {
-      console.error("Error reordering projects:", error);
-      toast({
-        title: "Error al reordenar proyectos",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  };
 
-  return { addProject, updateProject, deleteProject, getProjectById, updateProjectOrder };
+  return { addProject, updateProject, deleteProject, getProjectById };
 }

@@ -22,7 +22,6 @@ export async function fetchTaskDetails(task: any): Promise<Task | null> {
     // Format notes with author name
     const formattedNotes = notesData?.map(note => ({
       id: note.id,
-      task_id: note.task_id, // Add task_id to fix the typing issue
       content: note.content,
       author: note.users?.name || 'Unknown',
       createdAt: note.created_at

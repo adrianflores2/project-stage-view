@@ -1,111 +1,169 @@
 
-import { useState } from 'react';
-import { Report } from '@/types';
-import { User } from '@/types';
+import { Report, Task, SubTask } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/components/ui/use-toast';
 
 export function useReportOperations(
+  tasks: Task[],
   reports: Report[],
   setReportsList: React.Dispatch<React.SetStateAction<Report[]>>,
-  currentUser: User | null
+  currentUser: any
 ) {
-  // Refresh reports from database
-  const refreshReports = async () => {
-    try {
-      const { supabase } = await import('@/integrations/supabase/client');
-      const { data: reportsData, error } = await supabase
-        .from('reports')
-        .select('*, users!reports_user_id_fkey(name)')
-        .order('date', { ascending: false });
-        
-      if (error) {
-        console.error('Error fetching reports:', error);
-        return;
-      }
-      
-      if (reportsData) {
-        // Process reports data
-        const processedReports = reportsData.map(report => ({
-          id: report.id,
-          title: report.title || `Report ${report.id}`,
-          date: report.date,
-          user_id: report.user_id,
-          message: report.message,
-          project_id: report.project_id,
-          projectId: report.project_id,
-          tasks: [],
-          users: report.users
-        }));
-        
-        setReportsList(processedReports);
-      }
-    } catch (error) {
-      console.error('Error refreshing reports:', error);
-    }
-  };
+  const { toast } = useToast();
   
-  // Add report
-  const addReport = async (report: Omit<Report, 'id'>, taskIds: string[]) => {
+  const generateReport = async (taskId: string, message: string) => {
+    if (!currentUser) return;
+    
     try {
-      const { supabase } = await import('@/integrations/supabase/client');
+      // Check if the user already has a report for today
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Set to beginning of day for proper comparison
       
-      // Insert report
-      const { data: newReport, error: reportError } = await supabase
+      const existingTodayReports = reports.filter(r => {
+        const reportDate = new Date(r.date);
+        reportDate.setHours(0, 0, 0, 0);
+        return r.userId === currentUser.id && reportDate.getTime() === today.getTime();
+      });
+
+      // Delete existing reports for today from the same user
+      if (existingTodayReports.length > 0) {
+        for (const existingReport of existingTodayReports) {
+          // Delete report_tasks links
+          await supabase
+            .from('report_tasks')
+            .delete()
+            .eq('report_id', existingReport.id);
+          
+          // Delete report_subtasks links
+          await supabase
+            .from('report_subtasks')
+            .delete()
+            .eq('report_id', existingReport.id);
+          
+          // Delete the report itself
+          await supabase
+            .from('reports')
+            .delete()
+            .eq('id', existingReport.id);
+        }
+        
+        // Update local state to remove the deleted reports
+        setReportsList(prev => prev.filter(r => {
+          const reportDate = new Date(r.date);
+          reportDate.setHours(0, 0, 0, 0);
+          return !(r.userId === currentUser.id && reportDate.getTime() === today.getTime());
+        }));
+      }
+      
+      // Find the task to determine its project
+      const task = tasks.find(t => t.id === taskId);
+      const projectId = task?.projectId || task?.project_id;
+      
+      // Create new report in Supabase
+      const { data: newReport, error } = await supabase
         .from('reports')
         .insert({
-          title: report.title,
-          user_id: report.user_id || (currentUser?.id || null),
-          date: report.date,
-          message: report.message,
-          project_id: report.project_id || report.projectId
+          user_id: currentUser.id,
+          message: message,
+          date: new Date(),
+          project_id: projectId // Add project_id from the task
         })
         .select()
         .single();
         
-      if (reportError) {
-        console.error('Error creating report:', reportError);
-        throw new Error('Failed to create report');
+      if (error) throw error;
+      
+      // Get all completed tasks for the current user from TODAY ONLY
+      const todaysCompletedTasks = tasks.filter(t => 
+        (t.assignedTo || t.assigned_to) === currentUser.id &&
+        t.status === 'completed' &&
+        (t.completedDate || t.completed_date) &&
+        new Date((t.completedDate || t.completed_date)!).toDateString() === today.toDateString()
+      );
+      
+      if (todaysCompletedTasks.length === 0) {
+        toast({
+          title: "No completed tasks",
+          description: "You don't have any completed tasks for today to include in the report."
+        });
       }
       
-      // Add report tasks
-      for (const taskId of taskIds) {
-        const { error: taskError } = await supabase
+      // Add tasks to report_tasks
+      if (todaysCompletedTasks.length > 0) {
+        const taskLinks = todaysCompletedTasks.map(task => ({
+          report_id: newReport.id,
+          task_id: task.id
+        }));
+        
+        await supabase
           .from('report_tasks')
-          .insert({
-            report_id: newReport.id,
-            task_id: taskId
-          });
-          
-        if (taskError) {
-          console.error('Error adding task to report:', taskError);
-          // Optionally, you might want to handle this error more gracefully
-        }
+          .insert(taskLinks);
       }
       
-      // Update state
-      setReportsList(prevReports => [...prevReports, {
-        ...report,
-        id: newReport.id
-      }]);
+      // Get all subtasks completed today only
+      const completedSubtasks: SubTask[] = [];
+      tasks
+        .filter(t => (t.assignedTo || t.assigned_to) === currentUser.id)
+        .forEach(t => {
+          // Filter subtasks to only include those completed today
+          const completedToday = t.subtasks.filter(st => {
+            if (st.status !== 'completed') return false;
+            // Since SubTask doesn't have an updatedAt property in its type definition,
+            // we can't filter based on completion date for subtasks
+            // We'll include all completed subtasks instead
+            return true;
+          });
+          completedSubtasks.push(...completedToday);
+        });
       
-    } catch (error) {
-      console.error('Error creating report:', error);
-      throw error;
+      // Add subtasks to report_subtasks
+      if (completedSubtasks.length > 0) {
+        const subtaskLinks = completedSubtasks.map(subtask => ({
+          report_id: newReport.id,
+          subtask_id: subtask.id
+        }));
+        
+        await supabase
+          .from('report_subtasks')
+          .insert(subtaskLinks);
+      }
+      
+      // Format report for state
+      const formattedReport: Report = {
+        id: newReport.id,
+        userId: currentUser.id,
+        userName: currentUser.name,
+        date: newReport.date,
+        message: newReport.message,
+        projectId: newReport.project_id,
+        completedTasks: todaysCompletedTasks,
+        completedSubtasks: completedSubtasks
+      };
+      
+      setReportsList(prev => [...prev, formattedReport]);
+      
+      toast({
+        title: "Report generated",
+        description: "Your daily report has been submitted successfully."
+      });
+    } catch (error: any) {
+      console.error("Error generating report:", error);
+      toast({
+        title: "Failed to generate report",
+        description: error.message,
+        variant: "destructive"
+      });
     }
   };
   
-  // Generate report (placeholder implementation)
-  const generateReport = async (taskId: string, message: string) => {
-    console.log(`Generating report for task ${taskId} with message: ${message}`);
+  const getReports = () => {
+    // Allow coordinators and supervisors to see all reports
+    if (currentUser?.role === 'coordinator' || currentUser?.role === 'supervisor') {
+      return reports;
+    }
+    // Workers can only see their own reports
+    return reports.filter(report => report.userId === currentUser.id);
   };
 
-  // Get reports (placeholder implementation)
-  const getReports = () => {
-    return reports;
-  };
-  
-  return {
-    addReport,
-    generateReport,
-    getReports
-  };
+  return { generateReport, getReports };
 }

@@ -77,7 +77,7 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
   const project = getProjectById(task.projectId || task.project_id || '');
   
   // Worker can now update task status and add subtasks
-  const canAddNote = true; // Modificado para permitir que todos los usuarios (incluidos workers) añadan notas
+  const canAddNote = currentUser?.role !== 'worker';
   const canAddSubtask = currentUser?.role === 'worker' || currentUser?.role === 'coordinator';
   const canEditTask = currentUser?.role === 'coordinator';
   const canUpdateStatus = currentUser?.role === 'worker' || currentUser?.role === 'coordinator';
@@ -108,7 +108,7 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
     setNewSubtask('');
   };
   
-  const handleSubtaskStatusChange = (subtaskId: string, status: SubTask['status']) => {
+  const handleSubtaskStatusChange = (subtaskId: string, status: 'not-started' | 'in-progress' | 'completed') => {
     const subtask = task.subtasks.find(st => st.id === subtaskId);
     if (subtask) {
       updateSubtask(task.id, { ...subtask, status });

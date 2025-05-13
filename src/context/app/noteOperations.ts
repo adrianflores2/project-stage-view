@@ -1,87 +1,77 @@
-
-import { useState } from 'react';
-import { Task, User, Note } from '@/types';
-import { useToast } from '@/components/ui/use-toast';
+import { Task } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/components/ui/sonner';
 
 export function useNoteOperations(
   tasks: Task[],
   setTasksList: React.Dispatch<React.SetStateAction<Task[]>>,
-  currentUser: User | null
+  currentUser: any
 ) {
-  const { toast } = useToast();
-  
-  // Add a note to a task
-  const addNote = async (taskId: string, content: string): Promise<void> => {
-    if (!content.trim() || !taskId || !currentUser) {
-      toast({
-        title: "Error",
-        description: "Cannot add empty note or missing task/user",
-        variant: "destructive"
-      });
-      return;
-    }
-    
+  const addNote = async (taskId: string, content: string) => {
     try {
-      const { supabase } = await import('@/integrations/supabase/client');
+      // Validate that task exists
+      const taskIndex = tasks.findIndex(t => t.id === taskId);
+      if (taskIndex === -1) {
+        toast.error("Task not found", {
+          description: "Cannot add note to non-existent task"
+        });
+        return;
+      }
       
-      // Create note in Supabase
+      // Ensure current user exists
+      if (!currentUser) {
+        toast.error("User not found", {
+          description: "You must be logged in to add notes"
+        });
+        return;
+      }
+
+      // Insert note in Supabase
       const { data: newNote, error } = await supabase
         .from('notes')
         .insert({
-          content,
           task_id: taskId,
+          content: content,
           author_id: currentUser.id
         })
-        .select()
-        .single();
-      
-      if (error) throw error;
-      
-      // Also get the author's name
-      const { data: authorData } = await supabase
-        .from('users')
-        .select('name')
-        .eq('id', currentUser.id)
+        .select('*, users!notes_author_id_fkey(name)')
         .single();
         
-      // Update local state
-      const updatedTasks = tasks.map(task => {
-        if (task.id === taskId) {
-          // Format the note to match our Note type
-          const formattedNote: Note = {
-            id: newNote.id,
-            task_id: taskId,
-            content: newNote.content,
-            author: authorData?.name || currentUser.name,
-            createdAt: newNote.created_at || new Date().toISOString()
-          };
-          
-          return {
-            ...task,
-            notes: [...task.notes, formattedNote]
-          };
-        }
-        return task;
-      });
+      if (error) {
+        console.error("Error creating note:", error);
+        throw error;
+      }
       
+      // Format the new note for the UI
+      const formattedNote = {
+        id: newNote.id,
+        content: newNote.content,
+        author: newNote.users?.name || currentUser.name || 'Unknown',
+        createdAt: newNote.created_at
+      };
+      
+      // Update local state immediately
+      const updatedTasks = [...tasks];
+      const task = updatedTasks[taskIndex];
+      
+      // Add the new note to the task
+      const updatedTask = {
+        ...task,
+        notes: [...task.notes, formattedNote]
+      };
+      
+      // Update the task in the list
+      updatedTasks[taskIndex] = updatedTask;
       setTasksList(updatedTasks);
       
-      toast({
-        title: "Note added",
-        description: "Your note has been added successfully"
+      toast.success("Note added", {
+        description: "Your note has been added"
       });
-      
-      // Return void instead of formattedNote
-      return;
-      
     } catch (error: any) {
       console.error("Error adding note:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to add note",
-        variant: "destructive" 
+      toast.error("Failed to add note", {
+        description: error.message
       });
-      throw error;
     }
   };
   

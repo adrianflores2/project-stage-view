@@ -1,12 +1,12 @@
 
-import { User, Task, Project, SubTask, Note } from '@/types';
+import { User, Task, Project } from '@/types';
 
-// Mock Users
+// Mock Users with passwords
 export const users: User[] = [
-  { id: '1', name: 'John Worker', role: 'worker', email: 'john@example.com' },
-  { id: '2', name: 'Jane Coordinator', role: 'coordinator', email: 'jane@example.com' },
-  { id: '3', name: 'Mike Supervisor', role: 'supervisor', email: 'mike@example.com' },
-  { id: '4', name: 'Sarah Worker', role: 'worker', email: 'sarah@example.com' },
+  { id: '1', name: 'John Worker', role: 'worker', email: 'john@example.com', password: 'password123' },
+  { id: '2', name: 'Jane Coordinator', role: 'coordinator', email: 'jane@example.com', password: 'password123' },
+  { id: '3', name: 'Mike Supervisor', role: 'supervisor', email: 'mike@example.com', password: 'password123' },
+  { id: '4', name: 'Sarah Worker', role: 'worker', email: 'sarah@example.com', password: 'password123' },
 ];
 
 // Mock Projects
@@ -31,45 +31,31 @@ export const projects: Project[] = [
   },
 ];
 
-// Mock SubTasks
-const createSubtask = (id: string, taskId: string, title: string, status: SubTask['status']): SubTask => ({
-  id,
-  task_id: taskId,
-  title,
-  status
-});
-
-// Mock Tasks
+// Mock Tasks - now with priority field
 export const tasks: Task[] = [
   {
     id: '1',
     title: 'Create wireframes',
     description: 'Create wireframes for the new homepage design',
     assignedTo: '1', // John Worker
-    assigned_to: '1',
     projectId: '1', // Website Redesign
-    project_id: '1',
     projectStage: 'Design',
-    project_stage_id: 'Design',
     status: 'in-progress',
     subtasks: [
-      createSubtask('1-1', '1', 'Research competitors', 'completed'),
-      createSubtask('1-2', '1', 'Draft mobile layout', 'in-progress'),
-      createSubtask('1-3', '1', 'Draft desktop layout', 'not-started'),
+      { id: '1-1', title: 'Research competitors', status: 'completed' },
+      { id: '1-2', title: 'Draft mobile layout', status: 'in-progress' },
+      { id: '1-3', title: 'Draft desktop layout', status: 'not-started' },
     ],
     notes: [
       { 
-        id: '1-1',
-        task_id: '1',
+        id: '1-1', 
         content: 'Please focus on mobile-first approach', 
         author: 'Jane Coordinator', 
-        createdAt: new Date('2025-04-28').toISOString() 
+        createdAt: new Date('2025-04-28') 
       },
     ],
-    assignedDate: new Date('2025-04-25').toISOString(),
-    assigned_date: new Date('2025-04-25').toISOString(),
-    dueDate: new Date('2025-05-10').toISOString(),
-    due_date: new Date('2025-05-10').toISOString(),
+    assignedDate: new Date('2025-04-25'),
+    dueDate: new Date('2025-05-10'),
     progress: 33, // 1 out of 3 subtasks completed
     priority: 'Alta'
   },
@@ -78,18 +64,13 @@ export const tasks: Task[] = [
     title: 'Implement user authentication',
     description: 'Add login and registration functionality',
     assignedTo: '4', // Sarah Worker
-    assigned_to: '4',
     projectId: '1', // Website Redesign
-    project_id: '1',
     projectStage: 'Development',
-    project_stage_id: 'Development',
     status: 'not-started',
     subtasks: [],
     notes: [],
-    assignedDate: new Date('2025-04-30').toISOString(),
-    assigned_date: new Date('2025-04-30').toISOString(),
-    dueDate: new Date('2025-05-15').toISOString(),
-    due_date: new Date('2025-05-15').toISOString(),
+    assignedDate: new Date('2025-04-30'),
+    dueDate: new Date('2025-05-15'),
     progress: 0,
     priority: 'Media'
   },
@@ -98,40 +79,32 @@ export const tasks: Task[] = [
     title: 'Create app icon',
     description: 'Design an icon for the mobile app',
     assignedTo: '1', // John Worker
-    assigned_to: '1',
     projectId: '2', // Mobile App
-    project_id: '2',
     projectStage: 'UI Design',
-    project_stage_id: 'UI Design',
     status: 'completed',
     subtasks: [
-      createSubtask('3-1', '3', 'Research icon trends', 'completed'),
-      createSubtask('3-2', '3', 'Create design alternatives', 'completed'),
-      createSubtask('3-3', '3', 'Get feedback', 'completed'),
-      createSubtask('3-4', '3', 'Finalize design', 'completed'),
+      { id: '3-1', title: 'Research icon trends', status: 'completed' },
+      { id: '3-2', title: 'Create design alternatives', status: 'completed' },
+      { id: '3-3', title: 'Get feedback', status: 'completed' },
+      { id: '3-4', title: 'Finalize design', status: 'completed' },
     ],
     notes: [
       { 
-        id: '3-1',
-        task_id: '3',
+        id: '3-1', 
         content: 'Icon looks great! Make sure to create versions for all required sizes', 
         author: 'Jane Coordinator', 
-        createdAt: new Date('2025-04-20').toISOString() 
+        createdAt: new Date('2025-04-20') 
       },
       { 
-        id: '3-2',
-        task_id: '3',
+        id: '3-2', 
         content: 'Please double check against Android and iOS requirements', 
         author: 'Mike Supervisor', 
-        createdAt: new Date('2025-04-22').toISOString() 
+        createdAt: new Date('2025-04-22') 
       },
     ],
-    assignedDate: new Date('2025-04-15').toISOString(),
-    assigned_date: new Date('2025-04-15').toISOString(),
-    dueDate: new Date('2025-04-25').toISOString(),
-    due_date: new Date('2025-04-25').toISOString(),
-    completedDate: new Date('2025-04-24').toISOString(),
-    completed_date: new Date('2025-04-24').toISOString(),
+    assignedDate: new Date('2025-04-15'),
+    dueDate: new Date('2025-04-25'),
+    completedDate: new Date('2025-04-24'),
     progress: 100, // All subtasks completed
     priority: 'Baja'
   },
@@ -140,30 +113,24 @@ export const tasks: Task[] = [
     title: 'Develop content strategy',
     description: 'Create a content strategy for the marketing campaign',
     assignedTo: '4', // Sarah Worker
-    assigned_to: '4',
     projectId: '3', // Marketing Campaign
-    project_id: '3',
     projectStage: 'Planning',
-    project_stage_id: 'Planning',
     status: 'paused',
     subtasks: [
-      createSubtask('4-1', '4', 'Identify target audience', 'completed'),
-      createSubtask('4-2', '4', 'Research keywords', 'in-progress'),
-      createSubtask('4-3', '4', 'Create content calendar', 'not-started'),
+      { id: '4-1', title: 'Identify target audience', status: 'completed' },
+      { id: '4-2', title: 'Research keywords', status: 'in-progress' },
+      { id: '4-3', title: 'Create content calendar', status: 'not-started' },
     ],
     notes: [
       { 
-        id: '4-1',
-        task_id: '4',
+        id: '4-1', 
         content: 'Paused until we get more information from the client', 
         author: 'Jane Coordinator', 
-        createdAt: new Date('2025-05-01').toISOString() 
+        createdAt: new Date('2025-05-01') 
       },
     ],
-    assignedDate: new Date('2025-04-28').toISOString(),
-    assigned_date: new Date('2025-04-28').toISOString(),
-    dueDate: new Date('2025-05-12').toISOString(),
-    due_date: new Date('2025-05-12').toISOString(),
+    assignedDate: new Date('2025-04-28'),
+    dueDate: new Date('2025-05-12'),
     progress: 33, // 1 out of 3 subtasks completed
     priority: 'Media'
   },

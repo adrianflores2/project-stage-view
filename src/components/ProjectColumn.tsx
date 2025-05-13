@@ -2,9 +2,8 @@
 import { Project, Task } from '@/types';
 import TaskCard from './TaskCard';
 import { Button } from '@/components/ui/button';
-import { ChevronDown, ChevronUp, ArrowUp, ArrowDown, Trash } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash } from 'lucide-react';
 import { useState } from 'react';
-import { useAppContext } from '@/context/AppContext';
 
 interface ProjectColumnProps {
   project: Project;
@@ -15,7 +14,6 @@ interface ProjectColumnProps {
 
 const ProjectColumn = ({ project, tasks, viewMode, onDeleteProject }: ProjectColumnProps) => {
   const [collapsed, setCollapsed] = useState(false);
-  const { currentUser, updateProjectOrder } = useAppContext();
   
   // Group tasks by project stage
   const tasksByStage: Record<string, Task[]> = {};
@@ -38,15 +36,6 @@ const ProjectColumn = ({ project, tasks, viewMode, onDeleteProject }: ProjectCol
   // Check if there are any tasks in any stage
   const hasTasks = Object.values(tasksByStage).some(stageTasks => stageTasks.length > 0);
   
-  // Check if current user is coordinator (can reorder projects)
-  const canReorderProjects = currentUser?.role === 'coordinator';
-  
-  const handleMoveProject = (direction: 'up' | 'down') => {
-    if (updateProjectOrder) {
-      updateProjectOrder(project.id, direction);
-    }
-  };
-  
   return (
     <div className="mb-8">
       <div className="flex items-center justify-between mb-2">
@@ -68,41 +57,16 @@ const ProjectColumn = ({ project, tasks, viewMode, onDeleteProject }: ProjectCol
           </h2>
         </div>
         
-        <div className="flex items-center">
-          {canReorderProjects && (
-            <>
-              <Button 
-                variant="ghost" 
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => handleMoveProject('up')}
-                title="Move project up"
-              >
-                <ArrowUp size={16} />
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => handleMoveProject('down')}
-                title="Move project down"
-              >
-                <ArrowDown size={16} />
-              </Button>
-            </>
-          )}
-          
-          {onDeleteProject && (
-            <Button 
-              variant="ghost" 
-              size="icon"
-              className="h-8 w-8 text-destructive hover:text-destructive"
-              onClick={onDeleteProject}
-            >
-              <Trash size={16} />
-            </Button>
-          )}
-        </div>
+        {onDeleteProject && (
+          <Button 
+            variant="ghost" 
+            size="icon"
+            className="h-8 w-8 text-destructive hover:text-destructive"
+            onClick={onDeleteProject}
+          >
+            <Trash size={16} />
+          </Button>
+        )}
       </div>
       
       {!collapsed && (

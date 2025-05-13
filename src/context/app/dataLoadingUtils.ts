@@ -1,4 +1,3 @@
-
 import { User, Task, Project, Report, SubTask } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -75,7 +74,6 @@ export async function processTasksResponse(tasksData: any[]): Promise<Task[]> {
     }
     notesByTask[note.task_id].push({
       id: note.id,
-      task_id: note.task_id, // Add task_id property to fix type issue
       content: note.content,
       author: note.users?.name || 'Unknown',
       createdAt: note.created_at
@@ -197,14 +195,11 @@ export async function processReportsResponse(reportsData: any[]): Promise<Report
   // Combine reports with their tasks and subtasks
   return reportsData.map(report => ({
     id: report.id,
-    user_id: report.user_id,
-    title: report.title || `Report ${report.id}`, // Add required title field
-    date: new Date(report.date).toISOString(), // Ensure date is a string
-    tasks: tasksByReport[report.id] || [], // Add required tasks field
-    message: report.message || '',
-    project_id: report.project_id,
-    projectId: report.project_id,
+    userId: report.user_id,
     userName: report.users?.name || 'Unknown',
+    date: new Date(report.date),
+    message: report.message || '',
+    projectId: report.project_id || undefined, // Add projectId from the database
     completedTasks: tasksByReport[report.id] || [],
     completedSubtasks: subtasksByReport[report.id] || []
   }));

@@ -98,8 +98,6 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
     e.preventDefault();
     
     try {
-      const now = new Date().toISOString();
-      
       if (isMultipleAssignees) {
         // For multiple assignees, create a task for each selected user
         for (const userId of selectedUsers) {
@@ -108,17 +106,13 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
             description,
             projectId,
             project_id: projectId,
-            project_stage_id: projectStageId,
+            project_stage_id: projectStageId, // Make sure this is the ID, not name
             projectStage: projectStages.find(stage => stage.id === projectStageId)?.name || '',
             assignedTo: userId,
-            assigned_to: userId,
             status: 'not-started',
             subtasks: [],
             notes: [],
             dueDate,
-            due_date: dueDate,
-            assignedDate: now, // Added the missing assignedDate property
-            assigned_date: now, // Added the missing assigned_date property
             priority
           });
         }
@@ -129,17 +123,13 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
           description,
           projectId,
           project_id: projectId,
-          project_stage_id: projectStageId,
+          project_stage_id: projectStageId, // Make sure this is the ID, not name
           projectStage: projectStages.find(stage => stage.id === projectStageId)?.name || '',
           assignedTo,
-          assigned_to: assignedTo,
           status: 'not-started',
           subtasks: [],
           notes: [],
           dueDate,
-          due_date: dueDate,
-          assignedDate: now, // Added the missing assignedDate property
-          assigned_date: now, // Added the missing assigned_date property
           priority
         });
       }

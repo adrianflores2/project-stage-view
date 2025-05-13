@@ -1,145 +1,152 @@
 
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import { User, Task, Project, Report } from '@/types';
-import { useDataLoading } from './app/dataLoading';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { User, Task, Project, SubTask, Report } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
+import { AppContextProps } from './app/types';
+import { calculateTaskProgress } from './app/utilityFunctions';
+import { useProjectOperations } from './app/projectOperations';
 import { useTaskOperations } from './app/taskOperations';
 import { useSubtaskOperations } from './app/subtaskOperations';
-import { useProjectOperations } from './app/projectOperations';
-import { useUserOperations } from './app/userOperations';
-import { useAuthOperations } from './app/authOperations';
-import { useReportOperations } from './app/reportOperations';
 import { useNoteOperations } from './app/noteOperations';
-import { calculateTaskProgress } from './app/utilityFunctions';
-import { sortProjectsByDisplayOrder } from '@/utils/sortingUtils';
-import { AppContextProps } from './app/types';
+import { useUserOperations } from './app/userOperations';
+import { useReportOperations } from './app/reportOperations';
+import { useDataLoading } from './app/dataLoading';
+import { useAuthOperations } from './app/authOperations';
 
-// Create the context
+// Create the AppContext with a default undefined value
 const AppContext = createContext<AppContextProps | undefined>(undefined);
 
-export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+// Separate function to use hooks within the AppProvider component
+export const AppProvider = ({ children }: { children: ReactNode }) => {
+  // Initialize with empty arrays
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [users, setUsersList] = useState<User[]>([]);
-  const [tasks, setTasksList] = useState<Task[]>([]);
-  const [projects, setProjectsList] = useState<Project[]>([]);
-  const [reports, setReportsList] = useState<Report[]>([]);
-  const [dataLoaded, setDataLoaded] = useState(false);
+  const [usersList, setUsersList] = useState<User[]>([]);
+  const [tasksList, setTasksList] = useState<Task[]>([]);
+  const [projectsList, setProjectsList] = useState<Project[]>([]);
+  const [reportsList, setReportsList] = useState<Report[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
   
+  // Use the custom hooks within the component body
   const { loadInitialData } = useDataLoading(
-    setUsersList,
+    setUsersList, 
     setTasksList, 
-    setProjectsList,
-    setReportsList,
+    setProjectsList, 
+    setReportsList, 
     setDataLoaded
   );
   
   const { login, logout } = useAuthOperations(
-    setCurrentUser,
-    setIsAuthenticated,
+    setCurrentUser, 
+    setIsAuthenticated, 
     loadInitialData,
-    users
+    usersList
   );
   
-  const { getUserById, getUserByName, addUser, removeUser } = useUserOperations(
-    users,
-    tasks,
-    setUsersList
-  );
-  
-  const { 
-    getFilteredTasks, 
-    getTasksInProgress,
-    getCompletedTasksByDate,
-    addTask, 
-    updateTask, 
-    deleteTask,
-    reassignTask
-  } = useTaskOperations(
-    tasks, 
-    setTasksList,
-    calculateTaskProgress,
-    currentUser
-  );
-  
-  const {
-    addSubtask,
-    updateSubtask,
-    deleteSubtask
-  } = useSubtaskOperations(
-    tasks,
-    setTasksList
-  );
-  
-  const {
-    addProject,
-    updateProject,
-    deleteProject,
-    getProjectById,
-    updateProjectOrder
-  } = useProjectOperations(
-    projects,
+  const { addProject, updateProject, deleteProject, getProjectById } = useProjectOperations(
+    projectsList, 
     setProjectsList
   );
   
-  const {
-    addReport,
-    generateReport,
-    getReports
-  } = useReportOperations(
-    reports,
-    setReportsList,
-    currentUser
-  );
-  
-  const {
-    addNote
-  } = useNoteOperations(
-    tasks,
-    setTasksList,
-    currentUser
-  );
-  
-  const sortedProjects = sortProjectsByDisplayOrder(projects);
-  
-  const contextValue: AppContextProps = {
-    currentUser,
-    users,
-    getUserById,
-    getUserByName,
-    login,
-    logout,
-    projects: sortedProjects,
-    addProject,
-    updateProject,
-    deleteProject,
-    updateProjectOrder,
-    tasks,
-    addTask,
-    updateTask,
-    deleteTask,
-    reassignTask,
-    getFilteredTasks,
-    getTasksInProgress,
-    getCompletedTasksByDate,
-    addSubtask,
-    updateSubtask,
-    deleteSubtask,
-    addNote,
-    reports,
-    addReport,
-    generateReport,
-    getReports,
-    loadInitialData,
-    dataLoaded,
-    isAuthenticated,
-    getProjectById,
-    setCurrentUser,
+  const { getFilteredTasks, getTasksInProgress, getCompletedTasksByDate, 
+          addTask, updateTask, deleteTask, reassignTask } = useTaskOperations(
+    tasksList, 
+    setTasksList, 
     calculateTaskProgress,
-    addUser,
-    removeUser
-  };
+    currentUser
+  );
+  
+  const { addSubtask, updateSubtask, deleteSubtask } = useSubtaskOperations(
+    tasksList, 
+    setTasksList, 
+    calculateTaskProgress
+  );
+  
+  const { addNote } = useNoteOperations(
+    tasksList, 
+    setTasksList, 
+    currentUser
+  );
+  
+  const { getUserByName, getUserById, addUser, removeUser } = useUserOperations(
+    usersList, 
+    tasksList, 
+    setUsersList
+  );
+  
+  const { generateReport, getReports } = useReportOperations(
+    tasksList, 
+    reportsList, 
+    setReportsList, 
+    currentUser
+  );
+  
+  // Check for saved authentication on component mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data } = await supabase.auth.getSession();
+      
+      if (data.session) {
+        // Fetch user profile from our users table
+        const { data: userData, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', data.session.user.id)
+          .single();
+          
+        if (!error && userData) {
+          setCurrentUser(userData);
+          setIsAuthenticated(true);
+          await loadInitialData();
+        } else {
+          console.error("Error fetching user data:", error);
+          logout();
+        }
+      }
+    };
+    
+    checkAuth();
+  }, []);
 
-  return <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>;
+  return (
+    <AppContext.Provider value={{
+      currentUser,
+      users: usersList,
+      tasks: tasksList,
+      projects: projectsList,
+      reports: reportsList,
+      isAuthenticated,
+      login,
+      logout,
+      setCurrentUser,
+      getUserByName,
+      getUserById,
+      getProjectById,
+      getFilteredTasks,
+      getTasksInProgress,
+      getCompletedTasksByDate,
+      addTask,
+      updateTask,
+      deleteTask,
+      deleteProject,
+      reassignTask,
+      addSubtask,
+      updateSubtask,
+      deleteSubtask,
+      addNote,
+      addProject,
+      updateProject,
+      addUser,
+      removeUser,
+      calculateTaskProgress,
+      generateReport,
+      getReports,
+      loadInitialData,
+      dataLoaded
+    }}>
+      {children}
+    </AppContext.Provider>
+  );
 };
 
 export const useAppContext = () => {

@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { User, Task, Project, SubTask, Report } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
@@ -76,6 +77,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const { generateReport, getReports } = useReportOperations(
     tasksList, 
     reportsList, 
+    setReportsList, 
     currentUser
   );
   

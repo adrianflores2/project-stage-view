@@ -1,3 +1,4 @@
+
 import { Task, SubTask } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
@@ -194,11 +195,11 @@ export function useTaskOperations(
           projectId: newTask.project_id,
           project_id: newTask.project_id,
           projectStage: task.projectStage || '',
-          project_stage_id: task.project_stage_id,
+          project_stage_id: newTask.project_stage_id,
           status: newTask.status,
-          priority: task.priority || 'Media',
-          dueDate: task.due_date,
-          due_date: task.due_date,
+          priority: newTask.priority || 'Media',
+          dueDate: newTask.due_date,
+          due_date: newTask.due_date,
           assignedDate: newTask.assigned_date || new Date(),
           assigned_date: newTask.assigned_date,
           completedDate: newTask.completed_date,

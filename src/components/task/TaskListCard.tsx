@@ -13,7 +13,6 @@ import TaskBadge from './TaskBadge';
 import SubtasksList from './SubtasksList';
 import TaskDetail from '../TaskDetail';
 import TaskDate from './TaskDate';
-import { format, parseISO } from 'date-fns';
 
 interface TaskListCardProps {
   task: Task;
@@ -35,19 +34,6 @@ const TaskListCard = ({ task, projectColor, showMinimalInfo = false }: TaskListC
   
   // Get the latest note (notes are already sorted in dataLoadingUtils.ts)
   const latestNote = task.notes && task.notes.length > 0 ? task.notes[0] : null;
-  
-  // Format completed date with time
-  const formatCompletedDateTime = (dateValue: Date | string | null | undefined) => {
-    if (!dateValue) return '';
-    
-    const date = dateValue instanceof Date 
-      ? dateValue 
-      : typeof dateValue === 'string'
-        ? parseISO(dateValue)
-        : new Date(dateValue as any);
-    
-    return format(date, 'MMM d, yyyy h:mm a');
-  };
   
   // For completed tasks with minimal info
   if (showMinimalInfo && task.status === 'completed') {
@@ -81,8 +67,8 @@ const TaskListCard = ({ task, projectColor, showMinimalInfo = false }: TaskListC
                 
                 <div className="mx-2">|</div>
                 
-                {/* Completed Date with time */}
-                <span>Completed: {formatCompletedDateTime(task.completedDate || task.completed_date)}</span>
+                {/* Completed Date */}
+                <span>Completed: {task.completedDate || task.completed_date ? new Date(task.completedDate || task.completed_date!).toLocaleDateString() : ''}</span>
                 
                 {task.subtasks.length > 0 && (
                   <>

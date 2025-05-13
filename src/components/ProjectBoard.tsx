@@ -1,5 +1,5 @@
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import ProjectColumn from './ProjectColumn';
 import { 
@@ -13,22 +13,18 @@ import {
   CustomAlertDialogTitle,
 } from "@/components/ui/custom-alert-dialog";
 import CreateTaskDialog from './CreateTaskDialog';
-import { Task, TaskStatus, Project } from '@/types';
+import { Task, TaskStatus } from '@/types';
 import ProjectHeader from './project/ProjectHeader';
 import CompletedTasksSection from './project/CompletedTasksSection';
 import { Loader2 } from 'lucide-react';
 
 const ProjectBoard = () => {
-  const { currentUser, projects, users, getFilteredTasks, deleteProject, updateTask, updateProject } = useAppContext();
+  const { currentUser, projects, users, getFilteredTasks, deleteProject, updateTask } = useAppContext();
   const [selectedUserId, setSelectedUserId] = useState<string | undefined>(undefined);
-  const [selectedPriority, setSelectedPriority] = useState<string | undefined>(undefined);
-  const [selectedDueDateRange, setSelectedDueDateRange] = useState<string | undefined>(undefined);
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [projectsOrder, setProjectsOrder] = useState<string[]>(() => projects.map(p => p.id));
-  const draggedProjectRef = useRef<string | null>(null);
   
   // Determine which users can be filtered based on role
   let filterableUsers = [];
@@ -49,56 +45,6 @@ const ProjectBoard = () => {
       tasks = getFilteredTasks(projectId, selectedUserId);
     }
     
-    // Apply priority filter if selected
-    if (selectedPriority) {
-      tasks = tasks.filter(task => task.priority === selectedPriority);
-    }
-    
-    // Apply due date range filter if selected
-    if (selectedDueDateRange) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      const dueDate = (task: Task) => new Date(task.dueDate || task.due_date || '');
-      
-      switch (selectedDueDateRange) {
-        case 'today':
-          tasks = tasks.filter(task => {
-            const taskDueDate = dueDate(task);
-            return taskDueDate.toDateString() === today.toDateString();
-          });
-          break;
-        case 'this-week':
-          const endOfWeek = new Date(today);
-          endOfWeek.setDate(today.getDate() + (7 - today.getDay()));
-          tasks = tasks.filter(task => {
-            const taskDueDate = dueDate(task);
-            return taskDueDate >= today && taskDueDate <= endOfWeek;
-          });
-          break;
-        case 'this-month':
-          const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-          tasks = tasks.filter(task => {
-            const taskDueDate = dueDate(task);
-            return taskDueDate >= today && taskDueDate <= endOfMonth;
-          });
-          break;
-        case 'overdue':
-          tasks = tasks.filter(task => {
-            const taskDueDate = dueDate(task);
-            return taskDueDate < today && task.status !== 'completed';
-          });
-          break;
-      }
-    }
-    
-    // Sort tasks by assignment date (newest first)
-    tasks.sort((a, b) => {
-      const dateA = new Date(a.assignedDate || a.assigned_date || '').getTime();
-      const dateB = new Date(b.assignedDate || b.assigned_date || '').getTime();
-      return dateB - dateA; // Sort descending (newest first)
-    });
-    
     // Filter completed tasks
     return includeCompleted
       ? tasks.filter(task => task.status === 'completed')
@@ -115,8 +61,6 @@ const ProjectBoard = () => {
     setIsDeleting(true);
     try {
       await deleteProject(projectId);
-      // Remove from projects order
-      setProjectsOrder(prev => prev.filter(id => id !== projectId));
     } catch (error) {
       console.error("Error deleting project:", error);
     } finally {
@@ -147,70 +91,14 @@ const ProjectBoard = () => {
     await updateTask(updatedTask);
   };
   
-  // Project drag-and-drop handlers
-  const onDragStart = (e: React.DragEvent, projectId: string) => {
-    if (currentUser?.role !== 'coordinator') return;
-    // Prevent propagation to parent elements
-    e.stopPropagation();
-    draggedProjectRef.current = projectId;
-  };
-  
-  const onDragOver = (e: React.DragEvent, projectId: string) => {
-    e.preventDefault();
-    if (currentUser?.role !== 'coordinator') return;
-  };
-  
-  const onDrop = async (e: React.DragEvent, targetProjectId: string) => {
-    e.preventDefault();
-    if (currentUser?.role !== 'coordinator' || !draggedProjectRef.current) return;
-    
-    const draggedId = draggedProjectRef.current;
-    if (draggedId === targetProjectId) return;
-    
-    // Update order in state
-    const newOrder = [...projectsOrder];
-    const draggedIndex = newOrder.findIndex(id => id === draggedId);
-    const targetIndex = newOrder.findIndex(id => id === targetProjectId);
-    
-    if (draggedIndex !== -1 && targetIndex !== -1) {
-      newOrder.splice(draggedIndex, 1);
-      newOrder.splice(targetIndex, 0, draggedId);
-      setProjectsOrder(newOrder);
-      
-      // Update sort_order in database for each project
-      for (let i = 0; i < newOrder.length; i++) {
-        const projectId = newOrder[i];
-        const project = projects.find(p => p.id === projectId);
-        if (project) {
-          const updatedProject = { ...project, sort_order: i };
-          await updateProject(updatedProject);
-        }
-      }
-    }
-    
-    draggedProjectRef.current = null;
-  };
-  
-  // Get sorted projects
-  const sortedProjects = [...projects].sort((a, b) => {
-    const indexA = projectsOrder.indexOf(a.id);
-    const indexB = projectsOrder.indexOf(b.id);
-    return indexA - indexB;
-  });
-  
   const canDeleteProject = currentUser?.role === 'coordinator';
   const canCreateTask = currentUser?.role === 'coordinator';
-  const canReorderProjects = currentUser?.role === 'coordinator';
   
   return (
     <div className="p-4">
       <ProjectHeader 
         selectedUserId={selectedUserId}
         onUserChange={setSelectedUserId}
-        selectedPriority={selectedPriority}
-        onPriorityChange={setSelectedPriority}
-        selectedDueDateRange={selectedDueDateRange}
-        onDueDateRangeChange={setSelectedDueDateRange}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
         onCreateTask={() => setShowCreateTask(true)}
@@ -220,22 +108,14 @@ const ProjectBoard = () => {
       
       {/* Active Projects */}
       <div className="mb-8">
-        {sortedProjects.map(project => (
-          <div 
-            key={project.id}
-            draggable={canReorderProjects}
-            onDragStart={(e) => onDragStart(e, project.id)}
-            onDragOver={(e) => onDragOver(e, project.id)}
-            onDrop={(e) => onDrop(e, project.id)}
-            className={canReorderProjects ? "cursor-grab active:cursor-grabbing" : ""}
-          >
-            <ProjectColumn 
-              project={project} 
-              tasks={getTasksForProject(project.id, false)}
-              viewMode={viewMode}
-              onDeleteProject={canDeleteProject ? () => setProjectToDelete(project.id) : undefined}
-            />
-          </div>
+        {projects.map(project => (
+          <ProjectColumn 
+            key={project.id} 
+            project={project} 
+            tasks={getTasksForProject(project.id, false)}
+            viewMode={viewMode}
+            onDeleteProject={canDeleteProject ? () => setProjectToDelete(project.id) : undefined}
+          />
         ))}
       </div>
       

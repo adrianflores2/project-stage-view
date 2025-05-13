@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Tag, Edit, Save, X } from 'lucide-react';
+import { Plus, Tag, Edit, Save, X, Info } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -19,16 +19,30 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import ProjectDetails from '@/components/ProjectDetails';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 
 const Projects = () => {
   const { projects, addProject, updateProject, currentUser } = useAppContext();
   const [showCreateProject, setShowCreateProject] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   
   const [newProject, setNewProject] = useState({
     name: '',
     stages: ['Planning'],
     color: '#3b82f6',
+    number: 0,
+    client_name: '',
+    client_address: '',
+    description: '',
   });
   
   const [newStage, setNewStage] = useState('');
@@ -40,6 +54,10 @@ const Projects = () => {
         name: '',
         stages: ['Planning'],
         color: '#3b82f6',
+        number: 0,
+        client_name: '',
+        client_address: '',
+        description: '',
       });
       setShowCreateProject(false);
     }
@@ -112,10 +130,16 @@ const Projects = () => {
                   className="w-4 h-4 rounded-full mr-2" 
                   style={{ backgroundColor: project.color }}
                 ></span>
+                {project.number !== undefined && project.number > 0 && (
+                  <span className="text-muted-foreground mr-2">#{project.number}</span>
+                )}
                 {project.name}
               </CardTitle>
               <CardDescription>
                 {project.stages.length} stages
+                {project.client_name && (
+                  <div className="mt-1 text-sm">Client: {project.client_name}</div>
+                )}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -129,16 +153,44 @@ const Projects = () => {
                   ))}
                 </div>
                 
-                {currentUser?.role === 'coordinator' && (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="mt-2"
-                    onClick={() => setEditingProject(project)}
-                  >
-                    <Edit size={14} className="mr-1" /> Edit Project
-                  </Button>
-                )}
+                <div className="flex items-center space-x-2 mt-4">
+                  {currentUser?.role === 'coordinator' && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setEditingProject(project)}
+                    >
+                      <Edit size={14} className="mr-1" /> Edit
+                    </Button>
+                  )}
+                  
+                  <Sheet>
+                    <SheetTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => setSelectedProject(project)}
+                      >
+                        <Info size={14} className="mr-1" /> Details
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent>
+                      <SheetHeader>
+                        <SheetTitle>Project Details</SheetTitle>
+                        <SheetDescription>
+                          View detailed information about this project.
+                        </SheetDescription>
+                      </SheetHeader>
+                      <div className="mt-6">
+                        <ProjectDetails 
+                          project={selectedProject}
+                          isEditing={false}
+                          onProjectChange={() => {}}
+                        />
+                      </div>
+                    </SheetContent>
+                  </Sheet>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -159,6 +211,43 @@ const Projects = () => {
                 placeholder="Project name" 
                 value={newProject.name} 
                 onChange={(e) => setNewProject({...newProject, name: e.target.value})}
+              />
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium">Project Number</label>
+              <Input 
+                type="number" 
+                value={newProject.number || 0} 
+                onChange={(e) => setNewProject({...newProject, number: parseInt(e.target.value) || 0})}
+                min={0}
+              />
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium">Client Name</label>
+              <Input 
+                placeholder="Client name" 
+                value={newProject.client_name || ''} 
+                onChange={(e) => setNewProject({...newProject, client_name: e.target.value})}
+              />
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium">Client Address</label>
+              <Input 
+                placeholder="Client address" 
+                value={newProject.client_address || ''} 
+                onChange={(e) => setNewProject({...newProject, client_address: e.target.value})}
+              />
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium">Project Description</label>
+              <Input 
+                placeholder="Description" 
+                value={newProject.description || ''} 
+                onChange={(e) => setNewProject({...newProject, description: e.target.value})}
               />
             </div>
             
@@ -234,6 +323,43 @@ const Projects = () => {
                   placeholder="Project name" 
                   value={editingProject.name} 
                   onChange={(e) => setEditingProject({...editingProject, name: e.target.value})}
+                />
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium">Project Number</label>
+                <Input 
+                  type="number" 
+                  value={editingProject.number || 0} 
+                  onChange={(e) => setEditingProject({...editingProject, number: parseInt(e.target.value) || 0})}
+                  min={0}
+                />
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium">Client Name</label>
+                <Input 
+                  placeholder="Client name" 
+                  value={editingProject.client_name || ''} 
+                  onChange={(e) => setEditingProject({...editingProject, client_name: e.target.value})}
+                />
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium">Client Address</label>
+                <Input 
+                  placeholder="Client address" 
+                  value={editingProject.client_address || ''} 
+                  onChange={(e) => setEditingProject({...editingProject, client_address: e.target.value})}
+                />
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium">Project Description</label>
+                <Input 
+                  placeholder="Description" 
+                  value={editingProject.description || ''} 
+                  onChange={(e) => setEditingProject({...editingProject, description: e.target.value})}
                 />
               </div>
               

@@ -1,3 +1,4 @@
+
 export type UserRole = 'worker' | 'coordinator' | 'supervisor' | 'admin';
 
 export interface User {
@@ -53,6 +54,10 @@ export interface Project {
   name: string;
   stages: string[];
   color: string;
+  number?: number;
+  client_name?: string;
+  client_address?: string;
+  description?: string;
 }
 
 // Updated Report type with projectId field
@@ -103,6 +108,10 @@ export interface Database {
           color: string;
           created_at: string;
           updated_at: string;
+          number: number | null;
+          client_name: string | null;
+          client_address: string | null;
+          description: string | null;
         };
         Insert: {
           id?: string;
@@ -110,12 +119,20 @@ export interface Database {
           color?: string;
           created_at?: string;
           updated_at?: string;
+          number?: number | null;
+          client_name?: string | null;
+          client_address?: string | null;
+          description?: string | null;
         };
         Update: {
           id?: string;
           name?: string;
           color?: string;
           updated_at?: string;
+          number?: number | null;
+          client_name?: string | null;
+          client_address?: string | null;
+          description?: string | null;
         };
       };
       project_stages: {

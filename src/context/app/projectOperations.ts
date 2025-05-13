@@ -16,7 +16,11 @@ export function useProjectOperations(
         .from('projects')
         .insert({
           name: project.name,
-          color: project.color
+          color: project.color,
+          number: project.number,
+          client_name: project.client_name,
+          client_address: project.client_address,
+          description: project.description
         })
         .select()
         .single();
@@ -67,7 +71,11 @@ export function useProjectOperations(
         .from('projects')
         .update({
           name: updatedProject.name,
-          color: updatedProject.color
+          color: updatedProject.color,
+          number: updatedProject.number,
+          client_name: updatedProject.client_name,
+          client_address: updatedProject.client_address,
+          description: updatedProject.description
         })
         .eq('id', updatedProject.id);
         

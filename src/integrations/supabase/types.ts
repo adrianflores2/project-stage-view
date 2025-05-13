@@ -85,24 +85,36 @@ export type Database = {
       }
       projects: {
         Row: {
+          client_address: string | null
+          client_name: string | null
           color: string
           created_at: string | null
+          description: string | null
           id: string
           name: string
+          number: number | null
           updated_at: string | null
         }
         Insert: {
+          client_address?: string | null
+          client_name?: string | null
           color?: string
           created_at?: string | null
+          description?: string | null
           id?: string
           name: string
+          number?: number | null
           updated_at?: string | null
         }
         Update: {
+          client_address?: string | null
+          client_name?: string | null
           color?: string
           created_at?: string | null
+          description?: string | null
           id?: string
           name?: string
+          number?: number | null
           updated_at?: string | null
         }
         Relationships: []

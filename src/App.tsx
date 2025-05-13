@@ -14,8 +14,8 @@ import InProgress from '@/pages/InProgress';
 import Reports from '@/pages/Reports';
 import DailyActivity from '@/pages/DailyActivity';
 
-// Import Sonner Toast instead of Shadcn Toast
-import { Toaster } from '@/components/ui/sonner';
+// Import Toaster component
+import { Toaster } from '@/components/ui/toaster';
 import { useAppContext } from './context/AppContext';
 
 // MainContent component that uses the AppContext

@@ -11,12 +11,19 @@ export function useProjectOperations(
   
   const addProject = async (project: Omit<Project, 'id'>) => {
     try {
+      // Get the current max display order
+      const maxOrderProject = [...projects].sort((a, b) => 
+        (b.display_order || 0) - (a.display_order || 0)
+      )[0];
+      const nextDisplayOrder = maxOrderProject ? (maxOrderProject.display_order || 0) + 1 : 0;
+      
       // Insert project in Supabase
       const { data: newProject, error } = await supabase
         .from('projects')
         .insert({
           name: project.name,
-          color: project.color
+          color: project.color,
+          display_order: nextDisplayOrder
         })
         .select()
         .single();
@@ -41,7 +48,8 @@ export function useProjectOperations(
       // Add to state with stages
       const projectWithStages = {
         ...newProject,
-        stages: project.stages || []
+        stages: project.stages || [],
+        display_order: nextDisplayOrder
       };
       
       setProjectsList(prev => [...prev, projectWithStages]);
@@ -67,7 +75,8 @@ export function useProjectOperations(
         .from('projects')
         .update({
           name: updatedProject.name,
-          color: updatedProject.color
+          color: updatedProject.color,
+          display_order: updatedProject.display_order
         })
         .eq('id', updatedProject.id);
         

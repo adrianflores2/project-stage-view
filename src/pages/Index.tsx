@@ -165,19 +165,21 @@ const Index = () => {
   
   return (
     <>
-      <div className="flex justify-end p-4 pb-0">
+      {/* Remove the top refresh button and add floating button */}
+      <ProjectBoard />
+      
+      {/* Floating refresh button in bottom-right corner */}
+      <div className="fixed bottom-6 right-6 z-50">
         <Button 
-          size="sm" 
-          variant="outline" 
+          size="icon" 
+          className="h-12 w-12 rounded-full shadow-lg"
           onClick={handleRefresh} 
           disabled={isRefreshing}
-          className="flex items-center gap-2"
         >
-          <RefreshCw size={16} className={isRefreshing ? "animate-spin" : ""} />
-          {isRefreshing ? "Refreshing..." : "Refresh data"}
+          <RefreshCw size={20} className={isRefreshing ? "animate-spin" : ""} />
+          <span className="sr-only">{isRefreshing ? "Refreshing..." : "Refresh data"}</span>
         </Button>
       </div>
-      <ProjectBoard />
     </>
   );
 };

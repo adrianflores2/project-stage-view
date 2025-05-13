@@ -40,8 +40,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     users
   );
   
-  const { getUserById } = useUserOperations(
-    users
+  const { getUserById, getUserByName, addUser, removeUser } = useUserOperations(
+    users,
+    tasks,
+    setUsersList
   );
   
   const { 
@@ -104,6 +106,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     currentUser,
     users,
     getUserById,
+    getUserByName,
     login,
     logout,
     projects: sortedProjects,
@@ -132,10 +135,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     isAuthenticated,
     getProjectById,
     setCurrentUser,
-    getUserByName: (name) => users.find(u => u.name === name),
     calculateTaskProgress,
-    addUser: async () => {}, // Placeholder implementations until full implementation
-    removeUser: async () => {}  // Placeholder implementations until full implementation
+    addUser,
+    removeUser
   };
 
   return <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>;

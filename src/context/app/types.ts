@@ -17,7 +17,7 @@ export interface AppContextProps {
   getFilteredTasks: (projectId?: string, assignedTo?: string) => Task[];
   getTasksInProgress: () => Task[];
   getCompletedTasksByDate: (date: Date) => Task[];
-  addTask: (task: Omit<Task, 'id' | 'assignedDate' | 'progress'>) => Promise<Task[] | undefined>;
+  addTask: (task: Omit<Task, 'id' | 'progress'>) => Promise<Task[] | undefined>;
   updateTask: (task: Task) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
   deleteProject: (projectId: string) => Promise<void>;

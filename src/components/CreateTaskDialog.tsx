@@ -105,7 +105,7 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
             description,
             projectId,
             project_id: projectId,
-            project_stage_id: projectStageId, // Make sure this is the ID, not name
+            project_stage_id: projectStageId,
             projectStage: projectStages.find(stage => stage.id === projectStageId)?.name || '',
             assignedTo: userId,
             assigned_to: userId,
@@ -114,6 +114,7 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
             notes: [],
             dueDate,
             due_date: dueDate,
+            assigned_date: new Date().toISOString(),
             priority
           });
         }
@@ -124,7 +125,7 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
           description,
           projectId,
           project_id: projectId,
-          project_stage_id: projectStageId, // Make sure this is the ID, not name
+          project_stage_id: projectStageId,
           projectStage: projectStages.find(stage => stage.id === projectStageId)?.name || '',
           assignedTo,
           assigned_to: assignedTo,
@@ -133,6 +134,7 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
           notes: [],
           dueDate,
           due_date: dueDate,
+          assigned_date: new Date().toISOString(),
           priority
         });
       }

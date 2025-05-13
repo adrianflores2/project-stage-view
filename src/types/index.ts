@@ -4,6 +4,7 @@ export interface User {
   email: string;
   name: string;
   role: 'admin' | 'coordinator' | 'supervisor' | 'worker';
+  password?: string; // Added password as optional
 }
 
 export interface SubTask {
@@ -46,7 +47,6 @@ export interface Note {
   createdAt: string;
 }
 
-// Add display_order to Project interface
 export interface Project {
   id: string;
   name: string;
@@ -67,4 +67,8 @@ export interface Report {
   message?: string;
   projectId?: string;
   project_id?: string;
+  // Fields used in Reports.tsx
+  completedTasks?: any[]; 
+  completedSubtasks?: any[];
+  userName?: string;
 }

@@ -33,8 +33,8 @@ export function useUserOperations(
         
       if (error) throw error;
       
-      // If the current user is an admin, also create auth user directly
-      if (user.password && user.role === 'admin') {
+      // If the current user is an admin and password is provided, also create auth user directly
+      if ('password' in user && user.password && user.role === 'admin') {
         // Create the authentication user
         const { error: authError } = await supabase.auth.admin.createUser({
           email: user.email,

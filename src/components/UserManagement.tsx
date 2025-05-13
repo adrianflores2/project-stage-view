@@ -49,7 +49,7 @@ const UserManagement = ({ open, onOpenChange }: UserManagementDialogProps) => {
       name,
       email,
       role,
-      password
+      password // Now allowed by the updated User interface
     });
     
     // Reset form

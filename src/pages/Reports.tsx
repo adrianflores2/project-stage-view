@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -44,11 +43,12 @@ const Reports = () => {
     };
     
     sortedReports.forEach(report => {
-      if (report.projectId) {
-        if (!grouped[report.projectId]) {
-          grouped[report.projectId] = [];
+      if (report.projectId || report.project_id) {
+        const projectId = report.projectId || report.project_id;
+        if (!grouped[projectId!]) {
+          grouped[projectId!] = [];
         }
-        grouped[report.projectId].push(report);
+        grouped[projectId!].push(report);
       } else {
         grouped.unassigned.push(report);
       }
@@ -78,8 +78,8 @@ const Reports = () => {
   }, [reportsByProject, getProjectById]);
   
   const renderReportCard = (report: Report) => {
-    const user = getUserById(report.userId);
-    const project = report.projectId ? getProjectById(report.projectId) : undefined;
+    const user = getUserById(report.user_id);
+    const project = (report.projectId || report.project_id) ? getProjectById(report.projectId || report.project_id || '') : undefined;
     
     return (
       <Card key={report.id} className="overflow-hidden">
@@ -87,7 +87,7 @@ const Reports = () => {
           <div className="flex justify-between items-center">
             <div className="flex items-center">
               <User className="h-5 w-5 mr-2 text-gray-700" /> 
-              <CardTitle className="text-lg">{user?.name || report.userName}</CardTitle>
+              <CardTitle className="text-lg">{user?.name || report.userName || 'Unknown User'}</CardTitle>
             </div>
             <div className="flex items-center text-sm text-gray-500">
               <CalendarIcon className="h-4 w-4 mr-1" />
@@ -111,7 +111,7 @@ const Reports = () => {
             </div>
           )}
           
-          {report.completedTasks.length > 0 && (
+          {report.completedTasks && report.completedTasks.length > 0 && (
             <div className="mb-4">
               <h3 className="text-sm font-medium mb-2">Completed Tasks:</h3>
               <ul className="space-y-2">
@@ -128,7 +128,7 @@ const Reports = () => {
             </div>
           )}
           
-          {report.completedSubtasks.length > 0 && (
+          {report.completedSubtasks && report.completedSubtasks.length > 0 && (
             <div>
               <h3 className="text-sm font-medium mb-2">Completed Subtasks:</h3>
               <ul className="space-y-2">
@@ -144,7 +144,8 @@ const Reports = () => {
             </div>
           )}
           
-          {report.completedTasks.length === 0 && report.completedSubtasks.length === 0 && (
+          {(!report.completedTasks || report.completedTasks.length === 0) && 
+           (!report.completedSubtasks || report.completedSubtasks.length === 0) && (
             <Alert>
               <AlertDescription className="text-center py-2">
                 No completed tasks or subtasks in this report
@@ -170,13 +171,13 @@ const Reports = () => {
         </TableHeader>
         <TableBody>
           {filteredReports.map((report) => {
-            const user = getUserById(report.userId);
-            const project = report.projectId ? getProjectById(report.projectId) : undefined;
+            const user = getUserById(report.user_id);
+            const project = (report.projectId || report.project_id) ? getProjectById(report.projectId || report.project_id || '') : undefined;
             
             return (
               <TableRow key={report.id}>
                 <TableCell>{format(new Date(report.date), 'MMM d, yyyy')}</TableCell>
-                <TableCell>{user?.name || report.userName}</TableCell>
+                <TableCell>{user?.name || report.userName || 'Unknown'}</TableCell>
                 <TableCell>
                   {project ? (
                     <span style={{ color: project.color }}>{project.name}</span>
@@ -184,8 +185,8 @@ const Reports = () => {
                     <span className="text-gray-400">Not assigned</span>
                   )}
                 </TableCell>
-                <TableCell>{report.completedTasks.length}</TableCell>
-                <TableCell>{report.completedSubtasks.length}</TableCell>
+                <TableCell>{report.completedTasks?.length || 0}</TableCell>
+                <TableCell>{report.completedSubtasks?.length || 0}</TableCell>
               </TableRow>
             );
           })}

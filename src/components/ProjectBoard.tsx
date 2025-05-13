@@ -17,14 +17,16 @@ import { Task, TaskStatus } from '@/types';
 import ProjectHeader from './project/ProjectHeader';
 import CompletedTasksSection from './project/CompletedTasksSection';
 import { Loader2 } from 'lucide-react';
+import { TaskFilterProvider, useTaskFilters } from '@/context/TaskFilterContext';
 
-const ProjectBoard = () => {
-  const { currentUser, projects, users, getFilteredTasks, deleteProject, updateTask } = useAppContext();
+const ProjectBoardContent = () => {
+  const { currentUser, projects, users, deleteProject, updateTask } = useAppContext();
   const [selectedUserId, setSelectedUserId] = useState<string | undefined>(undefined);
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const { filterOptions, setFilterOptions, filteredTasks, resetFilters } = useTaskFilters();
   
   // Determine which users can be filtered based on role
   let filterableUsers = [];
@@ -36,19 +38,16 @@ const ProjectBoard = () => {
   
   // Get tasks based on filters
   const getTasksForProject = (projectId: string, includeCompleted: boolean) => {
-    // For workers, always filter by their ID
-    let tasks = [];
-    if (currentUser?.role === 'worker') {
-      tasks = getFilteredTasks(projectId, currentUser.id);
-    } else {
-      // For others, apply the selected user filter if any
-      tasks = getFilteredTasks(projectId, selectedUserId);
-    }
+    // Get all filtered tasks for this project
+    const projectTasks = filteredTasks.filter(task => {
+      const taskProjectId = task.projectId || task.project_id;
+      return taskProjectId === projectId;
+    });
     
-    // Filter completed tasks
+    // Further filter based on completion status
     return includeCompleted
-      ? tasks.filter(task => task.status === 'completed')
-      : tasks.filter(task => task.status !== 'completed');
+      ? projectTasks.filter(task => task.status === 'completed')
+      : projectTasks.filter(task => task.status !== 'completed');
   };
   
   // Group projects with completed tasks
@@ -104,6 +103,9 @@ const ProjectBoard = () => {
         onCreateTask={() => setShowCreateTask(true)}
         filterableUsers={filterableUsers}
         canCreateTask={canCreateTask}
+        projects={projects}
+        filterOptions={filterOptions}
+        onFilterChange={setFilterOptions}
       />
       
       {/* Active Projects */}
@@ -162,6 +164,17 @@ const ProjectBoard = () => {
         </CustomAlertDialogContent>
       </CustomAlertDialog>
     </div>
+  );
+};
+
+// Wrapper component that provides the TaskFilterContext
+const ProjectBoard = () => {
+  const { tasks } = useAppContext();
+  
+  return (
+    <TaskFilterProvider tasks={tasks}>
+      <ProjectBoardContent />
+    </TaskFilterProvider>
   );
 };
 

@@ -40,6 +40,7 @@ import {
   HoverCardContent
 } from '@/components/ui/hover-card';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { toast } from '@/components/ui/use-toast';
 
 interface TaskDetailProps {
   task: Task;
@@ -76,8 +77,8 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
   const assignedUser = getUserById(task.assignedTo || task.assigned_to || '');
   const project = getProjectById(task.projectId || task.project_id || '');
   
-  // Worker can now update task status and add subtasks
-  const canAddNote = currentUser?.role !== 'worker';
+  // Modified: Allow worker role to add notes - CHANGED HERE
+  const canAddNote = true; // All users can now add notes
   const canAddSubtask = currentUser?.role === 'worker' || currentUser?.role === 'coordinator';
   const canEditTask = currentUser?.role === 'coordinator';
   const canUpdateStatus = currentUser?.role === 'worker' || currentUser?.role === 'coordinator';
@@ -93,8 +94,21 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
     e.preventDefault();
     if (!newNote.trim()) return;
     
-    addNote(task.id, newNote);
-    setNewNote('');
+    try {
+      addNote(task.id, newNote);
+      setNewNote('');
+      toast({
+        title: "Note added",
+        description: "Your note has been added successfully.",
+      });
+    } catch (error) {
+      console.error("Failed to add note:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add note. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
   
   const handleSubtaskSubmit = (e: React.FormEvent) => {

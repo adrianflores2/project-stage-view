@@ -2,9 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Kanban, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { User } from '@/types';
+import { User, Project } from '@/types';
 import FilterableUserSelect from './FilterableUserSelect';
 import ViewModeToggle from './ViewModeToggle';
+import TaskFilters, { FilterOptions, defaultFilterOptions } from './TaskFilters';
 import { format } from 'date-fns';
 
 interface ProjectHeaderProps {
@@ -15,6 +16,9 @@ interface ProjectHeaderProps {
   onCreateTask: () => void;
   filterableUsers: User[];
   canCreateTask: boolean;
+  projects: Project[];
+  filterOptions: FilterOptions;
+  onFilterChange: (filters: FilterOptions) => void;
 }
 
 const ProjectHeader = ({
@@ -24,7 +28,10 @@ const ProjectHeader = ({
   onViewModeChange,
   onCreateTask,
   filterableUsers,
-  canCreateTask
+  canCreateTask,
+  projects,
+  filterOptions,
+  onFilterChange
 }: ProjectHeaderProps) => {
   const [currentTime, setCurrentTime] = useState(new Date());
   
@@ -60,6 +67,12 @@ const ProjectHeader = ({
             onUserChange={onUserChange}
           />
         )}
+        
+        <TaskFilters
+          projects={projects}
+          filterOptions={filterOptions}
+          onFilterChange={onFilterChange}
+        />
         
         <ViewModeToggle 
           viewMode={viewMode} 

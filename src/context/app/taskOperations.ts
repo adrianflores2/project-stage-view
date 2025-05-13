@@ -1,4 +1,3 @@
-
 import { Task, SubTask } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
@@ -93,6 +92,23 @@ export function useTaskOperations(
     };
   }, [currentUser, setTasksList, toast]);
   
+  // Sort tasks by assignment date (newest first)
+  const sortTasksByAssignmentDate = (tasksToSort: Task[]) => {
+    return [...tasksToSort].sort((a, b) => {
+      // Convert dates to timestamps for reliable comparison
+      const dateA = a.assignedDate instanceof Date 
+        ? a.assignedDate.getTime() 
+        : new Date(a.assignedDate || a.assigned_date || 0).getTime();
+      
+      const dateB = b.assignedDate instanceof Date 
+        ? b.assignedDate.getTime() 
+        : new Date(b.assignedDate || b.assigned_date || 0).getTime();
+      
+      // Sort newest first (descending order)
+      return dateB - dateA;
+    });
+  };
+  
   const getFilteredTasks = (projectId?: string, assignedTo?: string) => {
     let filtered = [...tasks];
     
@@ -107,7 +123,8 @@ export function useTaskOperations(
       filtered = filtered.filter(task => (task.assignedTo || task.assigned_to) === currentUser.id);
     }
     
-    return filtered;
+    // Sort tasks by assignment date (newest first)
+    return sortTasksByAssignmentDate(filtered);
   };
 
   const getTasksInProgress = () => {
@@ -117,10 +134,13 @@ export function useTaskOperations(
       filteredTasks = tasks.filter(task => (task.assignedTo || task.assigned_to) === currentUser.id);
     }
     
-    return filteredTasks.filter(task => 
+    const inProgressTasks = filteredTasks.filter(task => 
       task.status === 'in-progress' || 
       task.subtasks.some(subtask => subtask.status === 'in-progress')
     );
+    
+    // Sort tasks by assignment date (newest first)
+    return sortTasksByAssignmentDate(inProgressTasks);
   };
   
   const getCompletedTasksByDate = (date: Date) => {
@@ -130,7 +150,7 @@ export function useTaskOperations(
       filteredTasks = tasks.filter(task => (task.assignedTo || task.assigned_to) === currentUser.id);
     }
     
-    return filteredTasks.filter(task => 
+    const completedTasks = filteredTasks.filter(task => 
       task.status === 'completed' && 
       (task.completedDate || task.completed_date) && 
       // Fix: Convert string date to Date object if needed
@@ -140,6 +160,9 @@ export function useTaskOperations(
           ? task.completed_date.toDateString() === date.toDateString() 
           : new Date(task.completedDate || task.completed_date as string).toDateString() === date.toDateString())
     );
+    
+    // Sort tasks by assignment date (newest first)
+    return sortTasksByAssignmentDate(completedTasks);
   };
 
   const addTask = async (task: Omit<Task, 'id' | 'assignedDate' | 'progress'>) => {

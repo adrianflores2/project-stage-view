@@ -20,6 +20,19 @@ import { Check, Calendar } from 'lucide-react';
 import { Task } from '@/types';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
+// Helper function to format completion time consistently
+const formatCompletionTime = (completionDate: Date | string | null | undefined) => {
+  if (!completionDate) return 'Unknown';
+  
+  const dateObj = completionDate instanceof Date 
+    ? completionDate 
+    : typeof completionDate === 'string'
+      ? parseISO(completionDate)
+      : new Date(completionDate as any);
+      
+  return format(dateObj, 'h:mm a');
+};
+
 const DailyActivity = () => {
   const { tasks, getUserById, getProjectById } = useAppContext();
   const [selectedDate, setSelectedDate] = useState<string>('today');
@@ -153,18 +166,9 @@ const DailyActivity = () => {
                           )}
                         </div>
                         
-                        {task.completedDate && (
-                          <div className="text-xs text-gray-500 mt-2">
-                            Completed at: {format(
-                              task.completedDate instanceof Date 
-                                ? task.completedDate 
-                                : typeof task.completedDate === 'string'
-                                  ? parseISO(task.completedDate)
-                                  : new Date(task.completedDate as any),
-                              'h:mm a'
-                            )}
-                          </div>
-                        )}
+                        <div className="text-xs text-gray-500 mt-2">
+                          Completed at: {formatCompletionTime(task.completedDate || task.completed_date)}
+                        </div>
                       </CardContent>
                     </Card>
                   );

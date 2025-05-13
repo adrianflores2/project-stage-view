@@ -1,4 +1,3 @@
-
 import { Project } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
@@ -183,6 +182,8 @@ export function useProjectOperations(
       projectToSwap.display_order = tempOrder;
       
       // Update both projects in database
+      const { supabase } = await import('@/integrations/supabase/client');
+      
       const updates = [
         supabase.from('projects')
           .update({ display_order: projectToMove.display_order })
@@ -196,12 +197,24 @@ export function useProjectOperations(
       await Promise.all(updates);
       
       // Update local state with new ordering
-      setProjectsList([...orderedProjects]);
+      setProjectsList([...projects.map(p => {
+        if (p.id === projectToMove.id) {
+          return {...p, display_order: projectToMove.display_order};
+        } else if (p.id === projectToSwap.id) {
+          return {...p, display_order: projectToSwap.display_order};
+        }
+        return p;
+      })]);
+      
+      toast({
+        title: "Proyectos reordenados",
+        description: `El orden de los proyectos ha sido actualizado`
+      });
       
     } catch (error: any) {
       console.error("Error reordering projects:", error);
       toast({
-        title: "Failed to reorder projects",
+        title: "Error al reordenar proyectos",
         description: error.message,
         variant: "destructive"
       });

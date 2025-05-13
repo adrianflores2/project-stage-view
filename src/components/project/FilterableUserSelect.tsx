@@ -31,7 +31,11 @@ const FilterableUserSelect = ({ users, selectedUserId, onUserChange }: Filterabl
         <SelectTrigger className="border-0 h-8 p-0">
           <SelectValue placeholder="All Users" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent 
+          className="z-50 bg-white shadow-lg border border-gray-200" 
+          align="start"
+          sideOffset={8}
+        >
           <SelectItem value="all">All Users</SelectItem>
           
           {coordinatorUsers.length > 0 && (

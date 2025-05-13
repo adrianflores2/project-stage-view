@@ -87,7 +87,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     getReports
   } = useReportOperations(
     reports,
-    setReportsList
+    setReportsList,
+    currentUser // Added the missing third argument
   );
   
   const {

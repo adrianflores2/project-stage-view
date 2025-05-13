@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { 
@@ -97,6 +98,8 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
     e.preventDefault();
     
     try {
+      const now = new Date().toISOString();
+      
       if (isMultipleAssignees) {
         // For multiple assignees, create a task for each selected user
         for (const userId of selectedUsers) {
@@ -114,7 +117,8 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
             notes: [],
             dueDate,
             due_date: dueDate,
-            assigned_date: new Date().toISOString(),
+            assignedDate: now, // Added the missing assignedDate property
+            assigned_date: now, // Added the missing assigned_date property
             priority
           });
         }
@@ -134,7 +138,8 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
           notes: [],
           dueDate,
           due_date: dueDate,
-          assigned_date: new Date().toISOString(),
+          assignedDate: now, // Added the missing assignedDate property
+          assigned_date: now, // Added the missing assigned_date property
           priority
         });
       }

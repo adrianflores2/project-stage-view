@@ -11,7 +11,7 @@ export function useNoteOperations(
   const { toast } = useToast();
   
   // Add a note to a task
-  const addNote = async (taskId: string, content: string) => {
+  const addNote = async (taskId: string, content: string): Promise<void> => {
     if (!content.trim() || !taskId || !currentUser) {
       toast({
         title: "Error",
@@ -71,7 +71,8 @@ export function useNoteOperations(
         description: "Your note has been added successfully"
       });
       
-      return formattedNote;
+      // Return void instead of formattedNote
+      return;
       
     } catch (error: any) {
       console.error("Error adding note:", error);

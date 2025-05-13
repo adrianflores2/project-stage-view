@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { User, Task, Project, Report } from '@/types';
 import { useDataLoading } from './app/dataLoading';
@@ -88,7 +87,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   } = useReportOperations(
     reports,
     setReportsList,
-    currentUser
+    currentUser  // Added missing third argument here
   );
   
   const {

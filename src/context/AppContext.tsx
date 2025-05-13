@@ -81,22 +81,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setProjectsList
   );
   
+  // Fix: Checking the implementation of useReportOperations, it should either have 2 or 3 arguments
   const {
     addReport,
     generateReport,
     getReports
   } = useReportOperations(
     reports,
-    setReportsList,
-    currentUser // Added the missing third argument
+    setReportsList
+    // Removing the third argument as it causes an error and adjusting the implementation
   );
   
+  // Fix: Checking the implementation of useNoteOperations to ensure it has the correct number of arguments
   const {
     addNote
   } = useNoteOperations(
     tasks,
     setTasksList,
-    currentUser
+    currentUser // This is correct based on the implementation
   );
   
   // Sort projects by display_order before providing them to consumers

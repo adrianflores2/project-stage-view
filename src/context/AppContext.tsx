@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { User, Task, Project, Report } from '@/types';
 import { useDataLoading } from './app/dataLoading';
@@ -81,30 +80,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setProjectsList
   );
   
-  // Fix: Checking the implementation of useReportOperations, it should either have 2 or 3 arguments
   const {
     addReport,
     generateReport,
     getReports
   } = useReportOperations(
     reports,
-    setReportsList
-    // Removing the third argument as it causes an error and adjusting the implementation
+    setReportsList,
+    currentUser
   );
   
-  // Fix: Checking the implementation of useNoteOperations to ensure it has the correct number of arguments
   const {
     addNote
   } = useNoteOperations(
     tasks,
     setTasksList,
-    currentUser // This is correct based on the implementation
+    currentUser
   );
   
-  // Sort projects by display_order before providing them to consumers
   const sortedProjects = sortProjectsByDisplayOrder(projects);
   
-  // Memoized context value to prevent unnecessary re-renders
   const contextValue: AppContextProps = {
     currentUser,
     users,

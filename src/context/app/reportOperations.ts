@@ -1,10 +1,12 @@
 
 import { useState } from 'react';
 import { Report } from '@/types';
+import { User } from '@/types';
 
 export function useReportOperations(
   reports: Report[],
-  setReportsList: React.Dispatch<React.SetStateAction<Report[]>>
+  setReportsList: React.Dispatch<React.SetStateAction<Report[]>>,
+  currentUser: User | null
 ) {
   // Refresh reports from database
   const refreshReports = async () => {
@@ -51,7 +53,7 @@ export function useReportOperations(
         .from('reports')
         .insert({
           title: report.title,
-          user_id: report.user_id,
+          user_id: report.user_id || (currentUser?.id || null),
           date: report.date,
           message: report.message,
           project_id: report.project_id || report.projectId

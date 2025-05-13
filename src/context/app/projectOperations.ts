@@ -9,8 +9,28 @@ export function useProjectOperations(
 ) {
   const { toast } = useToast();
   
+  // Helper function to validate project number uniqueness
+  const isProjectNumberUnique = (number: number, projectId?: string): boolean => {
+    if (!number || number === 0) return true; // Consider 0 as not set
+    
+    return !projects.some(project => 
+      project.number === number && 
+      (!projectId || project.id !== projectId) // Exclude the current project when updating
+    );
+  };
+  
   const addProject = async (project: Omit<Project, 'id'>) => {
     try {
+      // Validate project number uniqueness
+      if (project.number && project.number > 0 && !isProjectNumberUnique(project.number)) {
+        toast({
+          title: "Invalid project number",
+          description: "This project number is already in use. Please choose another number.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       // Insert project in Supabase
       const { data: newProject, error } = await supabase
         .from('projects')
@@ -48,7 +68,11 @@ export function useProjectOperations(
         stages: project.stages || []
       };
       
-      setProjectsList(prev => [...prev, projectWithStages]);
+      // Update state with sorted projects
+      setProjectsList(prev => {
+        const updatedList = [...prev, projectWithStages];
+        return updatedList.sort((a, b) => (a.number || 0) - (b.number || 0));
+      });
       
       toast({
         title: "Project created",
@@ -66,6 +90,17 @@ export function useProjectOperations(
 
   const updateProject = async (updatedProject: Project) => {
     try {
+      // Validate project number uniqueness
+      if (updatedProject.number && updatedProject.number > 0 && 
+          !isProjectNumberUnique(updatedProject.number, updatedProject.id)) {
+        toast({
+          title: "Invalid project number",
+          description: "This project number is already in use. Please choose another number.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       // Update project in Supabase
       const { error } = await supabase
         .from('projects')
@@ -105,9 +140,13 @@ export function useProjectOperations(
         }
       }
       
-      setProjectsList(prev => 
-        prev.map(project => project.id === updatedProject.id ? updatedProject : project)
-      );
+      // Update state with sorted projects
+      setProjectsList(prev => {
+        const updatedList = prev.map(project => 
+          project.id === updatedProject.id ? updatedProject : project
+        );
+        return updatedList.sort((a, b) => (a.number || 0) - (b.number || 0));
+      });
       
       toast({
         title: "Project updated",

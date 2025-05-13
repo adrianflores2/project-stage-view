@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { User, Project } from '@/types';
 import FilterableUserSelect from './FilterableUserSelect';
 import ViewModeToggle from './ViewModeToggle';
-import TaskFilters, { FilterOptions, defaultFilterOptions } from './TaskFilters';
+import TaskFilters, { FilterOptions } from './TaskFilters';
 import { format } from 'date-fns';
 
 interface ProjectHeaderProps {
@@ -43,6 +43,15 @@ const ProjectHeader = ({
     
     return () => clearInterval(interval);
   }, []);
+
+  // Handle user filter change and update filter options
+  const handleUserChange = (userId: string | undefined) => {
+    onUserChange(userId);
+    onFilterChange({
+      ...filterOptions,
+      assignedToUserId: userId
+    });
+  };
   
   return (
     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
@@ -64,7 +73,7 @@ const ProjectHeader = ({
           <FilterableUserSelect 
             users={filterableUsers}
             selectedUserId={selectedUserId}
-            onUserChange={onUserChange}
+            onUserChange={handleUserChange}
           />
         )}
         

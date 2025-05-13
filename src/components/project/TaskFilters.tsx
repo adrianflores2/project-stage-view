@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { 
   DropdownMenu, 
@@ -26,6 +25,7 @@ export interface FilterOptions {
   };
   status: string[];
   projectIds: string[];
+  assignedToUserId?: string | undefined;
 }
 
 interface TaskFiltersProps {
@@ -39,6 +39,7 @@ export const defaultFilterOptions: FilterOptions = {
   dueDate: { type: null, range: null },
   status: [],
   projectIds: [],
+  assignedToUserId: undefined,
 };
 
 const TaskFilters = ({ projects, filterOptions, onFilterChange }: TaskFiltersProps) => {

@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { Task, Project } from '@/types';
 import { FilterOptions, defaultFilterOptions } from '@/components/project/TaskFilters';
 import { isPast, isWithinInterval } from 'date-fns';
+import { useAppContext } from './AppContext';
 
 interface TaskFilterContextProps {
   filterOptions: FilterOptions;
@@ -18,9 +19,29 @@ export const TaskFilterProvider: React.FC<{
   tasks: Task[];
 }> = ({ children, tasks }) => {
   const [filterOptions, setFilterOptions] = useState<FilterOptions>(defaultFilterOptions);
+  const { currentUser } = useAppContext();
 
   const applyFilters = (tasks: Task[]): Task[] => {
-    return tasks.filter(task => {
+    // First, filter tasks based on user role
+    let filteredTasks = [...tasks];
+    
+    // If user is a worker, they can only see their tasks
+    if (currentUser?.role === 'worker') {
+      filteredTasks = filteredTasks.filter(task => {
+        const taskAssignee = task.assignedTo || task.assigned_to;
+        return taskAssignee === currentUser.id;
+      });
+    } 
+    // If a specific user is selected in the filters, filter by that user
+    else if (filterOptions.assignedToUserId) {
+      filteredTasks = filteredTasks.filter(task => {
+        const taskAssignee = task.assignedTo || task.assigned_to;
+        return taskAssignee === filterOptions.assignedToUserId;
+      });
+    }
+
+    // Then apply the rest of the filters
+    return filteredTasks.filter(task => {
       // Filter by priority
       if (filterOptions.priority.length > 0 && task.priority) {
         if (!filterOptions.priority.includes(task.priority)) {
@@ -70,7 +91,24 @@ export const TaskFilterProvider: React.FC<{
     });
   };
 
-  const filteredTasks = applyFilters(tasks);
+  // Sort tasks by assignment date (newest first)
+  const sortTasksByDate = (tasksToSort: Task[]): Task[] => {
+    return [...tasksToSort].sort((a, b) => {
+      const dateA = a.assignedDate instanceof Date 
+        ? a.assignedDate.getTime() 
+        : new Date(a.assignedDate || a.assigned_date || 0).getTime();
+      
+      const dateB = b.assignedDate instanceof Date 
+        ? b.assignedDate.getTime() 
+        : new Date(b.assignedDate || b.assigned_date || 0).getTime();
+      
+      // Sort newest first (descending order)
+      return dateB - dateA;
+    });
+  };
+
+  // First apply filters, then sort by date
+  const filteredAndSortedTasks = sortTasksByDate(applyFilters(tasks));
 
   const resetFilters = () => {
     setFilterOptions(defaultFilterOptions);
@@ -81,7 +119,7 @@ export const TaskFilterProvider: React.FC<{
       value={{ 
         filterOptions, 
         setFilterOptions, 
-        filteredTasks,
+        filteredTasks: filteredAndSortedTasks,
         resetFilters
       }}
     >

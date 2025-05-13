@@ -29,10 +29,18 @@ export async function processProjectsResponse(projectsData: any[]): Promise<Proj
   });
   
   // Combine projects with their stages
-  return projectsData.map(project => ({
+  const projectsWithStages = projectsData.map(project => ({
     ...project,
     stages: (stagesByProject[project.id] || []).map(stage => stage.name)
   }));
+  
+  // Sort projects by number (projects with number 0 or null go to the end)
+  return projectsWithStages.sort((a, b) => {
+    // Handle null or 0 project numbers
+    const numA = a.number === null || a.number === 0 ? Number.MAX_SAFE_INTEGER : a.number;
+    const numB = b.number === null || b.number === 0 ? Number.MAX_SAFE_INTEGER : b.number;
+    return numA - numB;
+  });
 }
 
 // Process tasks response with their subtasks and notes

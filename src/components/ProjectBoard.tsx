@@ -50,8 +50,15 @@ const ProjectBoardContent = () => {
       : projectTasks.filter(task => task.status !== 'completed');
   };
   
+  // Sort projects by number
+  const sortedProjects = [...projects].sort((a, b) => {
+    const numberA = a.number || 0;
+    const numberB = b.number || 0;
+    return numberA - numberB;
+  });
+  
   // Group projects with completed tasks
-  const projectsWithCompletedTasks = projects.filter(project => {
+  const projectsWithCompletedTasks = sortedProjects.filter(project => {
     const completedTasks = getTasksForProject(project.id, true);
     return completedTasks.length > 0;
   });
@@ -103,14 +110,14 @@ const ProjectBoardContent = () => {
         onCreateTask={() => setShowCreateTask(true)}
         filterableUsers={filterableUsers}
         canCreateTask={canCreateTask}
-        projects={projects}
+        projects={sortedProjects}
         filterOptions={filterOptions}
         onFilterChange={setFilterOptions}
       />
       
       {/* Active Projects */}
       <div className="mb-8">
-        {projects.map(project => (
+        {sortedProjects.map(project => (
           <ProjectColumn 
             key={project.id} 
             project={project} 

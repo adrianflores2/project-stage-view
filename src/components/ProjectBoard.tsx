@@ -148,8 +148,10 @@ const ProjectBoard = () => {
   };
   
   // Project drag-and-drop handlers
-  const onDragStart = (projectId: string) => {
+  const onDragStart = (e: React.DragEvent, projectId: string) => {
     if (currentUser?.role !== 'coordinator') return;
+    // Prevent propagation to parent elements
+    e.stopPropagation();
     draggedProjectRef.current = projectId;
   };
   
@@ -175,12 +177,12 @@ const ProjectBoard = () => {
       newOrder.splice(targetIndex, 0, draggedId);
       setProjectsOrder(newOrder);
       
-      // Update display_order in database for each project
+      // Update sort_order in database for each project
       for (let i = 0; i < newOrder.length; i++) {
         const projectId = newOrder[i];
         const project = projects.find(p => p.id === projectId);
         if (project) {
-          const updatedProject = { ...project, display_order: i };
+          const updatedProject = { ...project, sort_order: i };
           await updateProject(updatedProject);
         }
       }
@@ -222,7 +224,7 @@ const ProjectBoard = () => {
           <div 
             key={project.id}
             draggable={canReorderProjects}
-            onDragStart={() => onDragStart(project.id)}
+            onDragStart={(e) => onDragStart(e, project.id)}
             onDragOver={(e) => onDragOver(e, project.id)}
             onDrop={(e) => onDrop(e, project.id)}
             className={canReorderProjects ? "cursor-grab active:cursor-grabbing" : ""}

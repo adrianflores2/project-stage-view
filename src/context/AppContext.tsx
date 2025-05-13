@@ -11,51 +11,10 @@ import { useReportOperations } from './app/reportOperations';
 import { useNoteOperations } from './app/noteOperations';
 import { calculateTaskProgress } from './app/utilityFunctions';
 import { sortProjectsByDisplayOrder } from '@/utils/sortingUtils';
+import { AppContextProps } from './app/types';
 
-// Initial state context
-type AppContextType = {
-  // Users
-  currentUser: User | null;
-  users: User[];
-  getUserById: (id: string) => User | undefined;
-  login: (email: string, password: string) => Promise<User | null>;
-  logout: () => Promise<void>;
-  
-  // Projects
-  projects: Project[];
-  addProject: (project: Omit<Project, 'id'>) => Promise<void>;
-  updateProject: (project: Project) => Promise<void>;
-  deleteProject: (projectId: string) => Promise<void>;
-  updateProjectOrder: (projectId: string, direction: 'up' | 'down') => Promise<void>;
-  
-  // Tasks
-  tasks: Task[];
-  addTask: (task: Omit<Task, 'id' | 'assignedDate' | 'progress'>) => Promise<Task[] | undefined>;
-  updateTask: (task: Task) => Promise<void>;
-  deleteTask: (taskId: string) => Promise<void>;
-  reassignTask: (taskId: string, newAssigneeId: string) => Promise<void>;
-  getFilteredTasks: (projectId?: string, assignedTo?: string) => Task[];
-  getTasksInProgress: () => Task[];
-  getCompletedTasksByDate: (date: Date) => Task[];
-  
-  // Subtasks
-  addSubtask: (taskId: string, title: string) => Promise<void>;
-  updateSubtask: (subtaskId: string, updates: { status?: 'completed' | 'not-started', title?: string }) => Promise<void>;
-  deleteSubtask: (subtaskId: string) => Promise<void>;
-  
-  // Notes
-  addNote: (taskId: string, content: string) => Promise<any>;
-  
-  // Reports
-  reports: Report[];
-  addReport: (report: Omit<Report, 'id'>, taskIds: string[]) => Promise<void>;
-  
-  // Data loading
-  loadInitialData: () => Promise<void>;
-  dataLoaded: boolean;
-};
-
-const AppContext = createContext<AppContextType | undefined>(undefined);
+// Create the context
+const AppContext = createContext<AppContextProps | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -64,6 +23,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [projects, setProjectsList] = useState<Project[]>([]);
   const [reports, setReportsList] = useState<Report[]>([]);
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   
   const { loadInitialData } = useDataLoading(
     setUsersList,
@@ -74,8 +34,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
   
   const { login, logout } = useAuthOperations(
-    users, 
-    setCurrentUser
+    setCurrentUser,
+    setIsAuthenticated,
+    loadInitialData,
+    users
   );
   
   const { getUserById } = useUserOperations(
@@ -118,7 +80,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
   
   const {
-    addReport
+    addReport,
+    generateReport,
+    getReports
   } = useReportOperations(
     reports,
     setReportsList
@@ -136,7 +100,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const sortedProjects = sortProjectsByDisplayOrder(projects);
   
   // Memoized context value to prevent unnecessary re-renders
-  const contextValue = {
+  const contextValue: AppContextProps = {
     currentUser,
     users,
     getUserById,
@@ -161,8 +125,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addNote,
     reports,
     addReport,
+    generateReport,
+    getReports,
     loadInitialData,
-    dataLoaded
+    dataLoaded,
+    isAuthenticated,
+    getProjectById,
+    setCurrentUser,
+    getUserByName: (name) => users.find(u => u.name === name),
+    calculateTaskProgress,
+    addUser: async () => {}, // Placeholder implementations until full implementation
+    removeUser: async () => {}  // Placeholder implementations until full implementation
   };
 
   return <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>;

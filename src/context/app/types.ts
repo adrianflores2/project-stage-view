@@ -17,12 +17,12 @@ export interface AppContextProps {
   getFilteredTasks: (projectId?: string, assignedTo?: string) => Task[];
   getTasksInProgress: () => Task[];
   getCompletedTasksByDate: (date: Date) => Task[];
-  addTask: (task: Omit<Task, 'id' | 'assignedDate' | 'progress'>) => Promise<Task[]>;
+  addTask: (task: Omit<Task, 'id' | 'assignedDate' | 'progress'>) => Promise<Task[] | undefined>;
   updateTask: (task: Task) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
   deleteProject: (projectId: string) => Promise<void>;
   reassignTask: (taskId: string, newAssigneeId: string) => Promise<void>;
-  addSubtask: (taskId: string, subtask: Omit<SubTask, 'id'>) => Promise<void>;
+  addSubtask: (taskId: string, subtask: { title: string, status: SubTask['status'] }) => Promise<void>;
   updateSubtask: (taskId: string, subtask: SubTask) => Promise<void>;
   deleteSubtask: (taskId: string, subtaskId: string) => Promise<void>;
   addNote: (taskId: string, content: string) => Promise<void>;
@@ -32,7 +32,9 @@ export interface AppContextProps {
   removeUser: (userId: string) => Promise<void>;
   calculateTaskProgress: (task: Task) => number;
   generateReport: (taskId: string, message: string) => Promise<void>;
+  addReport: (report: Omit<Report, 'id'>, taskIds: string[]) => Promise<void>;
   getReports: () => Report[];
   loadInitialData: () => Promise<void>;
   dataLoaded: boolean;
+  updateProjectOrder: (projectId: string, direction: 'up' | 'down') => Promise<void>;
 }

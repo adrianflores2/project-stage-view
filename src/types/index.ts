@@ -1,3 +1,4 @@
+
 export interface User {
   id: string;
   email: string;
@@ -9,7 +10,7 @@ export interface SubTask {
   id: string;
   task_id: string;
   title: string;
-  status: 'completed' | 'not-started';
+  status: 'completed' | 'not-started' | 'in-progress';
 }
 
 export interface Task {
@@ -63,4 +64,7 @@ export interface Report {
   users?: {
     name: string;
   };
+  message?: string;
+  projectId?: string;
+  project_id?: string;
 }

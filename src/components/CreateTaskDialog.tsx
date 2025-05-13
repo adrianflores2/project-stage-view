@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { 
@@ -109,10 +108,12 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
             project_stage_id: projectStageId, // Make sure this is the ID, not name
             projectStage: projectStages.find(stage => stage.id === projectStageId)?.name || '',
             assignedTo: userId,
+            assigned_to: userId,
             status: 'not-started',
             subtasks: [],
             notes: [],
             dueDate,
+            due_date: dueDate,
             priority
           });
         }
@@ -126,10 +127,12 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
           project_stage_id: projectStageId, // Make sure this is the ID, not name
           projectStage: projectStages.find(stage => stage.id === projectStageId)?.name || '',
           assignedTo,
+          assigned_to: assignedTo,
           status: 'not-started',
           subtasks: [],
           notes: [],
           dueDate,
+          due_date: dueDate,
           priority
         });
       }

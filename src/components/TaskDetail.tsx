@@ -108,7 +108,7 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
     setNewSubtask('');
   };
   
-  const handleSubtaskStatusChange = (subtaskId: string, status: 'not-started' | 'in-progress' | 'completed') => {
+  const handleSubtaskStatusChange = (subtaskId: string, status: SubTask['status']) => {
     const subtask = task.subtasks.find(st => st.id === subtaskId);
     if (subtask) {
       updateSubtask(task.id, { ...subtask, status });

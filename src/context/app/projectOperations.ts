@@ -101,6 +101,8 @@ export function useProjectOperations(
         return;
       }
       
+      console.log("Updating project:", updatedProject);
+      
       // Update project in Supabase
       const { error } = await supabase
         .from('projects')
@@ -116,27 +118,70 @@ export function useProjectOperations(
         
       if (error) throw error;
       
-      // Update stages if changed
+      // FIX: Instead of deleting and recreating stages, update existing and add new stages
       if (updatedProject.stages) {
-        // First delete existing stages
-        await supabase
+        // Get current stages for comparison
+        const { data: currentStages, error: stagesError } = await supabase
           .from('project_stages')
-          .delete()
+          .select('id, name, display_order')
           .eq('project_id', updatedProject.id);
           
-        // Add new stages
-        const stagesToInsert = updatedProject.stages.map((stage, index) => ({
-          project_id: updatedProject.id,
-          name: stage,
-          display_order: index
-        }));
+        if (stagesError) throw stagesError;
         
-        if (stagesToInsert.length > 0) {
-          const { error: stagesError } = await supabase
-            .from('project_stages')
-            .insert(stagesToInsert);
+        // Map of current stage names to their IDs
+        const currentStagesMap = new Map();
+        if (currentStages) {
+          currentStages.forEach(stage => {
+            currentStagesMap.set(stage.name, stage.id);
+          });
+        }
+        
+        // Prepare stages to update or insert
+        for (let i = 0; i < updatedProject.stages.length; i++) {
+          const stageName = updatedProject.stages[i];
+          
+          if (currentStagesMap.has(stageName)) {
+            // Update existing stage display order
+            const stageId = currentStagesMap.get(stageName);
+            await supabase
+              .from('project_stages')
+              .update({ display_order: i })
+              .eq('id', stageId);
+              
+            // Remove from map to track which ones need to be deleted
+            currentStagesMap.delete(stageName);
+          } else {
+            // Insert new stage
+            await supabase
+              .from('project_stages')
+              .insert({
+                project_id: updatedProject.id,
+                name: stageName,
+                display_order: i
+              });
+          }
+        }
+        
+        // Delete stages that are no longer in the list, but only if there are no tasks using them
+        for (const [stageName, stageId] of currentStagesMap.entries()) {
+          // Check if any tasks are using this stage
+          const { data: tasksUsingStage, error: checkError } = await supabase
+            .from('tasks')
+            .select('id')
+            .eq('project_stage_id', stageId)
+            .limit(1);
             
-          if (stagesError) throw stagesError;
+          if (checkError) throw checkError;
+          
+          // Only delete if no tasks are using this stage
+          if (!tasksUsingStage || tasksUsingStage.length === 0) {
+            await supabase
+              .from('project_stages')
+              .delete()
+              .eq('id', stageId);
+          } else {
+            console.log(`Cannot delete stage ${stageName} (${stageId}) because tasks are still using it`);
+          }
         }
       }
       

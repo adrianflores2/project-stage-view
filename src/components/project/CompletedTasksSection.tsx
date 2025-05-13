@@ -1,9 +1,10 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Check } from 'lucide-react';
+import { Check, RefreshCw } from 'lucide-react';
 import { Project, Task } from '@/types';
 import TaskCard from '../task/TaskCard';
+import { useAppContext } from '@/context/AppContext';
 
 interface CompletedTasksSectionProps {
   projectsWithCompletedTasks: Project[];
@@ -17,6 +18,20 @@ const CompletedTasksSection = ({
   viewMode 
 }: CompletedTasksSectionProps) => {
   const [showCompleted, setShowCompleted] = useState(false);
+  const { loadInitialData } = useAppContext();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Handle refresh of completed tasks
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await loadInitialData();
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
   
   if (projectsWithCompletedTasks.length === 0) {
     return null;
@@ -35,6 +50,19 @@ const CompletedTasksSection = ({
         >
           {showCompleted ? "Hide" : "Show"}
         </Button>
+        
+        {showCompleted && (
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="ml-2 flex items-center gap-1"
+          >
+            <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} />
+            {isRefreshing ? "Refreshing..." : "Refresh"}
+          </Button>
+        )}
       </div>
       
       {showCompleted && (

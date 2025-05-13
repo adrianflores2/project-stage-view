@@ -15,6 +15,7 @@ import TaskProgress from './TaskProgress';
 import TaskDate from './TaskDate';
 import SubtasksList from './SubtasksList';
 import TaskDetail from '../TaskDetail';
+import { format, parseISO } from 'date-fns';
 
 interface TaskGridCardProps {
   task: Task;
@@ -36,6 +37,19 @@ const TaskGridCard = ({ task, projectColor, showMinimalInfo = false }: TaskGridC
   
   // Get the latest note (notes are already sorted in dataLoadingUtils.ts)
   const latestNote = task.notes && task.notes.length > 0 ? task.notes[0] : null;
+  
+  // Format completed date with time
+  const formatCompletedDateTime = (dateValue: Date | string | null | undefined) => {
+    if (!dateValue) return '';
+    
+    const date = dateValue instanceof Date 
+      ? dateValue 
+      : typeof dateValue === 'string'
+        ? parseISO(dateValue)
+        : new Date(dateValue as any);
+    
+    return format(date, 'MMM d, yyyy h:mm a');
+  };
   
   // For completed tasks with minimal info
   if (showMinimalInfo && task.status === 'completed') {
@@ -71,10 +85,10 @@ const TaskGridCard = ({ task, projectColor, showMinimalInfo = false }: TaskGridC
             {/* Due date */}
             <TaskDate dueDate={task.dueDate || task.due_date} status={task.status} />
             
-            {/* Completed Date */}
+            {/* Completed Date with time */}
             {(task.completedDate || task.completed_date) && (
               <div className="text-xs text-gray-500">
-                <span className="font-medium">Completed:</span> {task.completedDate || task.completed_date ? new Date(task.completedDate || task.completed_date!).toLocaleDateString() : ''}
+                <span className="font-medium">Completed:</span> {formatCompletedDateTime(task.completedDate || task.completed_date)}
               </div>
             )}
             

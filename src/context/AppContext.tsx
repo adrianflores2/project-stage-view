@@ -16,8 +16,8 @@ import { useAuthOperations } from './app/authOperations';
 // Create the AppContext with a default undefined value
 const AppContext = createContext<AppContextProps | undefined>(undefined);
 
-// Separate function to use hooks within the AppProvider component
-export const AppProvider = ({ children }: { children: ReactNode }) => {
+// AppProvider component that provides the context values
+export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   // Initialize with empty arrays
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [usersList, setUsersList] = useState<User[]>([]);

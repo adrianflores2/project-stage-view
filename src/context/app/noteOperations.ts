@@ -1,3 +1,4 @@
+
 import { Task } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/sonner';
@@ -67,11 +68,14 @@ export function useNoteOperations(
       toast.success("Note added", {
         description: "Your note has been added"
       });
+      
+      return formattedNote;
     } catch (error: any) {
       console.error("Error adding note:", error);
       toast.error("Failed to add note", {
         description: error.message
       });
+      return null;
     }
   };
   

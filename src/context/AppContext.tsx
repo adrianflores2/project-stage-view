@@ -1,152 +1,171 @@
 
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { User, Task, Project, SubTask, Report } from '@/types';
-import { supabase } from '@/integrations/supabase/client';
-import { AppContextProps } from './app/types';
-import { calculateTaskProgress } from './app/utilityFunctions';
-import { useProjectOperations } from './app/projectOperations';
+import React, { createContext, useContext, useState, useCallback } from 'react';
+import { User, Task, Project, Report } from '@/types';
+import { useDataLoading } from './app/dataLoading';
 import { useTaskOperations } from './app/taskOperations';
 import { useSubtaskOperations } from './app/subtaskOperations';
-import { useNoteOperations } from './app/noteOperations';
+import { useProjectOperations } from './app/projectOperations';
 import { useUserOperations } from './app/userOperations';
-import { useReportOperations } from './app/reportOperations';
-import { useDataLoading } from './app/dataLoading';
 import { useAuthOperations } from './app/authOperations';
+import { useReportOperations } from './app/reportOperations';
+import { useNoteOperations } from './app/noteOperations';
+import { calculateTaskProgress } from './app/utilityFunctions';
+import { sortProjectsByDisplayOrder } from '@/utils/sortingUtils';
 
-// Create the AppContext with a default undefined value
-const AppContext = createContext<AppContextProps | undefined>(undefined);
+// Initial state context
+type AppContextType = {
+  // Users
+  currentUser: User | null;
+  users: User[];
+  getUserById: (id: string) => User | undefined;
+  login: (email: string, password: string) => Promise<User | null>;
+  logout: () => Promise<void>;
+  
+  // Projects
+  projects: Project[];
+  addProject: (project: Omit<Project, 'id'>) => Promise<void>;
+  updateProject: (project: Project) => Promise<void>;
+  deleteProject: (projectId: string) => Promise<void>;
+  updateProjectOrder: (projectId: string, direction: 'up' | 'down') => Promise<void>;
+  
+  // Tasks
+  tasks: Task[];
+  addTask: (task: Omit<Task, 'id' | 'assignedDate' | 'progress'>) => Promise<Task[] | undefined>;
+  updateTask: (task: Task) => Promise<void>;
+  deleteTask: (taskId: string) => Promise<void>;
+  reassignTask: (taskId: string, newAssigneeId: string) => Promise<void>;
+  getFilteredTasks: (projectId?: string, assignedTo?: string) => Task[];
+  getTasksInProgress: () => Task[];
+  getCompletedTasksByDate: (date: Date) => Task[];
+  
+  // Subtasks
+  addSubtask: (taskId: string, title: string) => Promise<void>;
+  updateSubtask: (subtaskId: string, updates: { status?: 'completed' | 'not-started', title?: string }) => Promise<void>;
+  deleteSubtask: (subtaskId: string) => Promise<void>;
+  
+  // Notes
+  addNote: (taskId: string, content: string) => Promise<any>;
+  
+  // Reports
+  reports: Report[];
+  addReport: (report: Omit<Report, 'id'>, taskIds: string[]) => Promise<void>;
+  
+  // Data loading
+  loadInitialData: () => Promise<void>;
+  dataLoaded: boolean;
+};
 
-// Separate function to use hooks within the AppProvider component
-export const AppProvider = ({ children }: { children: ReactNode }) => {
-  // Initialize with empty arrays
+const AppContext = createContext<AppContextType | undefined>(undefined);
+
+export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [usersList, setUsersList] = useState<User[]>([]);
-  const [tasksList, setTasksList] = useState<Task[]>([]);
-  const [projectsList, setProjectsList] = useState<Project[]>([]);
-  const [reportsList, setReportsList] = useState<Report[]>([]);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [users, setUsersList] = useState<User[]>([]);
+  const [tasks, setTasksList] = useState<Task[]>([]);
+  const [projects, setProjectsList] = useState<Project[]>([]);
+  const [reports, setReportsList] = useState<Report[]>([]);
   const [dataLoaded, setDataLoaded] = useState(false);
   
-  // Use the custom hooks within the component body
   const { loadInitialData } = useDataLoading(
-    setUsersList, 
+    setUsersList,
     setTasksList, 
-    setProjectsList, 
-    setReportsList, 
+    setProjectsList,
+    setReportsList,
     setDataLoaded
   );
   
   const { login, logout } = useAuthOperations(
-    setCurrentUser, 
-    setIsAuthenticated, 
-    loadInitialData,
-    usersList
+    users, 
+    setCurrentUser
   );
   
-  const { addProject, updateProject, deleteProject, getProjectById } = useProjectOperations(
-    projectsList, 
-    setProjectsList
+  const { getUserById } = useUserOperations(
+    users
   );
   
-  const { getFilteredTasks, getTasksInProgress, getCompletedTasksByDate, 
-          addTask, updateTask, deleteTask, reassignTask } = useTaskOperations(
-    tasksList, 
-    setTasksList, 
+  const { 
+    getFilteredTasks, 
+    getTasksInProgress,
+    getCompletedTasksByDate,
+    addTask, 
+    updateTask, 
+    deleteTask,
+    reassignTask
+  } = useTaskOperations(
+    tasks, 
+    setTasksList,
     calculateTaskProgress,
     currentUser
   );
   
-  const { addSubtask, updateSubtask, deleteSubtask } = useSubtaskOperations(
-    tasksList, 
-    setTasksList, 
-    calculateTaskProgress
+  const {
+    addSubtask,
+    updateSubtask,
+    deleteSubtask
+  } = useSubtaskOperations(
+    tasks,
+    setTasksList
   );
   
-  const { addNote } = useNoteOperations(
-    tasksList, 
-    setTasksList, 
+  const {
+    addProject,
+    updateProject,
+    deleteProject,
+    getProjectById,
+    updateProjectOrder
+  } = useProjectOperations(
+    projects,
+    setProjectsList
+  );
+  
+  const {
+    addReport
+  } = useReportOperations(
+    reports,
+    setReportsList
+  );
+  
+  const {
+    addNote
+  } = useNoteOperations(
+    tasks,
+    setTasksList,
     currentUser
   );
   
-  const { getUserByName, getUserById, addUser, removeUser } = useUserOperations(
-    usersList, 
-    tasksList, 
-    setUsersList
-  );
+  // Sort projects by display_order before providing them to consumers
+  const sortedProjects = sortProjectsByDisplayOrder(projects);
   
-  const { generateReport, getReports } = useReportOperations(
-    tasksList, 
-    reportsList, 
-    setReportsList, 
-    currentUser
-  );
-  
-  // Check for saved authentication on component mount
-  useEffect(() => {
-    const checkAuth = async () => {
-      const { data } = await supabase.auth.getSession();
-      
-      if (data.session) {
-        // Fetch user profile from our users table
-        const { data: userData, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', data.session.user.id)
-          .single();
-          
-        if (!error && userData) {
-          setCurrentUser(userData);
-          setIsAuthenticated(true);
-          await loadInitialData();
-        } else {
-          console.error("Error fetching user data:", error);
-          logout();
-        }
-      }
-    };
-    
-    checkAuth();
-  }, []);
+  // Memoized context value to prevent unnecessary re-renders
+  const contextValue = {
+    currentUser,
+    users,
+    getUserById,
+    login,
+    logout,
+    projects: sortedProjects,
+    addProject,
+    updateProject,
+    deleteProject,
+    updateProjectOrder,
+    tasks,
+    addTask,
+    updateTask,
+    deleteTask,
+    reassignTask,
+    getFilteredTasks,
+    getTasksInProgress,
+    getCompletedTasksByDate,
+    addSubtask,
+    updateSubtask,
+    deleteSubtask,
+    addNote,
+    reports,
+    addReport,
+    loadInitialData,
+    dataLoaded
+  };
 
-  return (
-    <AppContext.Provider value={{
-      currentUser,
-      users: usersList,
-      tasks: tasksList,
-      projects: projectsList,
-      reports: reportsList,
-      isAuthenticated,
-      login,
-      logout,
-      setCurrentUser,
-      getUserByName,
-      getUserById,
-      getProjectById,
-      getFilteredTasks,
-      getTasksInProgress,
-      getCompletedTasksByDate,
-      addTask,
-      updateTask,
-      deleteTask,
-      deleteProject,
-      reassignTask,
-      addSubtask,
-      updateSubtask,
-      deleteSubtask,
-      addNote,
-      addProject,
-      updateProject,
-      addUser,
-      removeUser,
-      calculateTaskProgress,
-      generateReport,
-      getReports,
-      loadInitialData,
-      dataLoaded
-    }}>
-      {children}
-    </AppContext.Provider>
-  );
+  return <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>;
 };
 
 export const useAppContext = () => {

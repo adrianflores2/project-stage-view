@@ -17,6 +17,7 @@ import { Task, TaskStatus } from '@/types';
 import ProjectHeader from './project/ProjectHeader';
 import CompletedTasksSection from './project/CompletedTasksSection';
 import { Loader2 } from 'lucide-react';
+import { sortTasksByAssignmentDate } from '@/utils/sortingUtils';
 
 const ProjectBoard = () => {
   const { currentUser, projects, users, getFilteredTasks, deleteProject, updateTask } = useAppContext();
@@ -25,6 +26,9 @@ const ProjectBoard = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedPriority, setSelectedPriority] = useState<string | undefined>(undefined);
+  const [selectedStatus, setSelectedStatus] = useState<TaskStatus | undefined>(undefined);
+  const [selectedDueDate, setSelectedDueDate] = useState<string | undefined>(undefined);
   
   // Determine which users can be filtered based on role
   let filterableUsers = [];
@@ -45,10 +49,50 @@ const ProjectBoard = () => {
       tasks = getFilteredTasks(projectId, selectedUserId);
     }
     
-    // Filter completed tasks
-    return includeCompleted
+    // Filter by completion status
+    tasks = includeCompleted
       ? tasks.filter(task => task.status === 'completed')
       : tasks.filter(task => task.status !== 'completed');
+    
+    // Apply additional filters
+    if (selectedPriority) {
+      tasks = tasks.filter(task => task.priority === selectedPriority);
+    }
+    
+    if (selectedStatus && !includeCompleted) {
+      tasks = tasks.filter(task => task.status === selectedStatus);
+    }
+    
+    if (selectedDueDate) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      const nextWeek = new Date(today);
+      nextWeek.setDate(nextWeek.getDate() + 7);
+      
+      tasks = tasks.filter(task => {
+        if (!task.dueDate && !task.due_date) return false;
+        
+        const dueDate = new Date(task.dueDate || task.due_date || '');
+        
+        switch (selectedDueDate) {
+          case 'today':
+            return dueDate >= today && dueDate < tomorrow;
+          case 'week':
+            return dueDate >= today && dueDate < nextWeek;
+          case 'overdue':
+            return dueDate < today;
+          default:
+            return true;
+        }
+      });
+    }
+    
+    // Sort tasks by assignment date (newest first)
+    return sortTasksByAssignmentDate(tasks);
   };
   
   // Group projects with completed tasks
@@ -104,6 +148,12 @@ const ProjectBoard = () => {
         onCreateTask={() => setShowCreateTask(true)}
         filterableUsers={filterableUsers}
         canCreateTask={canCreateTask}
+        selectedPriority={selectedPriority}
+        onPriorityChange={setSelectedPriority}
+        selectedStatus={selectedStatus}
+        onStatusChange={setSelectedStatus}
+        selectedDueDate={selectedDueDate}
+        onDueDateChange={setSelectedDueDate}
       />
       
       {/* Active Projects */}

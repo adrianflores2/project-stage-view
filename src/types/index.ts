@@ -1,26 +1,15 @@
-export type UserRole = 'worker' | 'coordinator' | 'supervisor' | 'admin';
-
 export interface User {
   id: string;
-  name: string;
-  role: UserRole;
   email: string;
-  password?: string; // Added for authentication
-}
-
-export type TaskStatus = 'not-started' | 'in-progress' | 'paused' | 'completed';
-
-export interface Note {
-  id: string;
-  content: string;
-  author: string;
-  createdAt: Date;
+  name: string;
+  role: 'admin' | 'coordinator' | 'supervisor' | 'worker';
 }
 
 export interface SubTask {
   id: string;
+  task_id: string;
   title: string;
-  status: 'not-started' | 'in-progress' | 'completed';
+  status: 'completed' | 'not-started';
 }
 
 export interface Task {
@@ -28,193 +17,50 @@ export interface Task {
   title: string;
   description: string;
   assignedTo: string;
+  assigned_to: string;
   projectId: string;
+  project_id: string;
   projectStage: string;
-  status: TaskStatus;
+  project_stage_id: string;
+  status: 'not-started' | 'in-progress' | 'paused' | 'completed';
+  priority: 'Alta' | 'Media' | 'Baja';
+  dueDate: Date | string | null;
+  due_date: Date | string | null;
+  assignedDate: Date | string;
+  assigned_date: Date | string;
+  completedDate?: Date | string | null;
+  completed_date?: Date | string | null;
+  progress: number;
   subtasks: SubTask[];
   notes: Note[];
-  assignedDate: Date;
-  dueDate?: Date;
-  completedDate?: Date;
-  progress: number; // 0-100
-  priority?: 'Alta' | 'Media' | 'Baja'; // Added priority field
-  
-  // Supabase column names (snake_case)
-  project_id?: string;
-  project_stage_id?: string;
-  assigned_to?: string;
-  assigned_date?: string | Date;
-  due_date?: string | Date;
-  completed_date?: string | Date;
 }
 
+export type TaskStatus = Task['status'];
+
+export interface Note {
+  id: string;
+  task_id: string;
+  content: string;
+  author: string;
+  createdAt: string;
+}
+
+// Add display_order to Project interface
 export interface Project {
   id: string;
   name: string;
-  stages: string[];
   color: string;
+  stages: string[];
+  display_order?: number;
 }
 
-// Updated Report type with projectId field
 export interface Report {
   id: string;
-  userId: string;
-  userName: string;
-  date: Date;
-  message: string;
-  completedTasks: Task[];
-  completedSubtasks: SubTask[];
-  projectId?: string; // New field to link report to project
-}
-
-// Supabase database types
-export interface Database {
-  public: {
-    Tables: {
-      users: {
-        Row: {
-          id: string;
-          name: string;
-          email: string;
-          role: UserRole;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          name: string;
-          email: string;
-          role?: UserRole;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          name?: string;
-          email?: string;
-          role?: UserRole;
-          updated_at?: string;
-        };
-      };
-      projects: {
-        Row: {
-          id: string;
-          name: string;
-          color: string;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          name: string;
-          color?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          name?: string;
-          color?: string;
-          updated_at?: string;
-        };
-      };
-      project_stages: {
-        Row: {
-          id: string;
-          project_id: string;
-          name: string;
-          display_order: number;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          project_id: string;
-          name: string;
-          display_order?: number;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          project_id?: string;
-          name?: string;
-          display_order?: number;
-          updated_at?: string;
-        };
-      };
-      tasks: {
-        Row: {
-          id: string;
-          title: string;
-          description: string | null;
-          assigned_to: string | null;
-          project_id: string | null;
-          project_stage_id: string | null;
-          status: TaskStatus;
-          progress: number;
-          priority: 'Alta' | 'Media' | 'Baja' | null;
-          assigned_date: string | null;
-          due_date: string | null;
-          completed_date: string | null;
-          created_at: string | null;
-          updated_at: string | null;
-        };
-        Insert: {
-          id?: string;
-          title: string;
-          description?: string | null;
-          assigned_to?: string | null;
-          project_id?: string | null;
-          project_stage_id?: string | null;
-          status?: TaskStatus;
-          progress?: number;
-          priority?: 'Alta' | 'Media' | 'Baja' | null;
-          assigned_date?: string | null;
-          due_date?: string | null;
-          completed_date?: string | null;
-          created_at?: string | null;
-          updated_at?: string | null;
-        };
-        Update: {
-          id?: string;
-          title?: string;
-          description?: string | null;
-          assigned_to?: string | null;
-          project_id?: string | null;
-          project_stage_id?: string | null;
-          status?: TaskStatus;
-          progress?: number;
-          priority?: 'Alta' | 'Media' | 'Baja' | null;
-          assigned_date?: string | null;
-          due_date?: string | null;
-          completed_date?: string | null;
-          updated_at?: string | null;
-        };
-      };
-      reports: {
-        Row: {
-          id: string;
-          user_id: string | null;
-          date: string | null;
-          message: string | null;
-          project_id: string | null; // Added project_id field to match database change
-        };
-        Insert: {
-          id?: string;
-          user_id?: string | null;
-          date?: string | null;
-          message?: string | null;
-          project_id?: string | null; // Added project_id field for inserts
-        };
-        Update: {
-          id?: string;
-          user_id?: string | null;
-          date?: string | null;
-          message?: string | null;
-          project_id?: string | null; // Added project_id field for updates
-        };
-      };
-    };
+  title: string;
+  date: string;
+  user_id: string;
+  tasks: Task[];
+  users?: {
+    name: string;
   };
 }

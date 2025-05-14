@@ -65,7 +65,8 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
         const { data, error } = await supabase
           .from('project_stages')
           .select('id, name')
-          .eq('project_id', projectId);
+          .eq('project_id', projectId)
+          .order('display_order', { ascending: true });
           
         if (error) {
           console.error('Error fetching project stages:', error);
@@ -79,8 +80,11 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
         
         if (data && data.length > 0) {
           setProjectStages(data);
-          // Automatically select the first stage
-          setProjectStageId(data[0].id);
+          // Don't automatically set the first stage anymore
+          // This allows the user to select their preferred stage
+          if (!projectStageId) {
+            setProjectStageId('');
+          }
         } else {
           setProjectStages([]);
           setProjectStageId('');
@@ -93,6 +97,12 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
       setProjectStageId('');
     }
   }, [projectId, selectedProject, toast]);
+  
+  // Fix: Handle project stage change separately
+  const handleProjectStageChange = (value: string) => {
+    console.log("Selected project stage ID:", value);
+    setProjectStageId(value);
+  };
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -221,7 +231,7 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
               <label htmlFor="stage" className="text-sm font-medium">Project Stage</label>
               <Select 
                 value={projectStageId} 
-                onValueChange={setProjectStageId}
+                onValueChange={handleProjectStageChange}
                 disabled={!projectId || projectStages.length === 0} 
                 required
               >

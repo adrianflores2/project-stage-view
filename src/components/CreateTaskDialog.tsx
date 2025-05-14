@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { 
@@ -56,7 +57,9 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
   // Get project stages based on selected project
   const [projectStages, setProjectStages] = useState<{ id: string, name: string }[]>([]);
   
-  // Important: Removed projectStageId from dependencies to prevent infinite re-rendering
+  // Track the previous project ID to detect changes
+  const [prevProjectId, setPrevProjectId] = useState('');
+  
   useEffect(() => {
     if (projectId && selectedProject) {
       // Fetch project stages for the selected project from Supabase
@@ -80,9 +83,14 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
         
         if (data && data.length > 0) {
           setProjectStages(data);
+          
           // Only reset projectStageId when changing projects
-          // Not when the user has already selected a stage
-          setProjectStageId('');
+          if (projectId !== prevProjectId) {
+            setProjectStageId('');
+          }
+          
+          // Update the previous project ID
+          setPrevProjectId(projectId);
         } else {
           setProjectStages([]);
           setProjectStageId('');
@@ -94,7 +102,7 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
       setProjectStages([]);
       setProjectStageId('');
     }
-  }, [projectId, selectedProject, toast]); // Removed projectStageId from dependencies
+  }, [projectId, selectedProject, toast, prevProjectId]); // Added prevProjectId, still no projectStageId
   
   // Handle project stage change separately
   const handleProjectStageChange = (value: string) => {

@@ -1,13 +1,16 @@
-
 import { useState } from 'react';
 import { User, Task, Project, Report, SubTask } from '@/types';
+import { Provider, Quotation, QuotationItem } from '@/types/quotation';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/sonner';
 import { 
   processUsersResponse,
   processProjectsResponse, 
   processTasksResponse, 
-  processReportsResponse 
+  processReportsResponse,
+  processQuotationsResponse,
+  processQuotationItemsResponse,
+  processProvidersResponse
 } from './dataLoadingUtils';
 
 export function useDataLoading(
@@ -15,6 +18,9 @@ export function useDataLoading(
   setTasksList: React.Dispatch<React.SetStateAction<Task[]>>,
   setProjectsList: React.Dispatch<React.SetStateAction<Project[]>>,
   setReportsList: React.Dispatch<React.SetStateAction<Report[]>>,
+  setProvidersList: React.Dispatch<React.SetStateAction<Provider[]>>,
+  setQuotationsList: React.Dispatch<React.SetStateAction<Quotation[]>>,
+  setQuotationItemsList: React.Dispatch<React.SetStateAction<QuotationItem[]>>,
   setDataLoaded: React.Dispatch<React.SetStateAction<boolean>>
 ) {
   const loadInitialData = async () => {
@@ -43,14 +49,20 @@ export function useDataLoading(
         projectStagesResponse,
         tasksResponse,
         subtasksResponse,
-        reportsResponse
+        reportsResponse,
+        providersResponse,
+        quotationsResponse,
+        quotationItemsResponse
       ] = await Promise.all([
         supabase.from('users').select('*'),
         supabase.from('projects').select('*'),
         supabase.from('project_stages').select('*'),
         supabase.from('tasks').select('*'),
         supabase.from('subtasks').select('*'),
-        supabase.from('reports').select('*, users!reports_user_id_fkey(name)')
+        supabase.from('reports').select('*, users!reports_user_id_fkey(name)'),
+        supabase.from('providers_test').select('*'),
+        supabase.from('quotations_test').select('*'),
+        supabase.from('quotation_items_test').select('*')
       ]);
       
       // Check for errors and log responses
@@ -84,12 +96,30 @@ export function useDataLoading(
         throw reportsResponse.error;
       }
       
+      if (providersResponse.error) {
+        console.error("Error fetching providers:", providersResponse.error);
+        throw providersResponse.error;
+      }
+      
+      if (quotationsResponse.error) {
+        console.error("Error fetching quotations:", quotationsResponse.error);
+        throw quotationsResponse.error;
+      }
+      
+      if (quotationItemsResponse.error) {
+        console.error("Error fetching quotation items:", quotationItemsResponse.error);
+        throw quotationItemsResponse.error;
+      }
+      
       console.log("Data fetched:", {
         users: usersResponse.data?.length,
         projects: projectsResponse.data?.length,
         projectStages: projectStagesResponse.data?.length,
         tasks: tasksResponse.data?.length,
-        subtasks: subtasksResponse.data?.length
+        subtasks: subtasksResponse.data?.length,
+        providers: providersResponse.data?.length,
+        quotations: quotationsResponse.data?.length,
+        quotationItems: quotationItemsResponse.data?.length
       });
       
       // Group project stages by project
@@ -124,17 +154,23 @@ export function useDataLoading(
       }));
       
       // Process responses in parallel for better performance
-      const [users, projects, tasks, reports] = await Promise.all([
+      const [users, projects, tasks, reports, providers, quotations, quotationItems] = await Promise.all([
         processUsersResponse(usersResponse.data),
         processProjectsResponse(projectsWithStages),
         processTasksResponse(tasksWithSubtasks),
-        processReportsResponse(reportsResponse.data)
+        processReportsResponse(reportsResponse.data),
+        processProvidersResponse(providersResponse.data),
+        processQuotationsResponse(quotationsResponse.data),
+        processQuotationItemsResponse(quotationItemsResponse.data)
       ]);
       
       console.log("Processed data:", {
         users: users.length,
         projects: projects.length,
-        tasks: tasks.length
+        tasks: tasks.length,
+        providers: providers.length,
+        quotations: quotations.length,
+        quotationItems: quotationItems.length
       });
       
       // Update state with processed data
@@ -142,10 +178,13 @@ export function useDataLoading(
       setProjectsList(projects);
       setTasksList(tasks);
       setReportsList(reports);
+      setProvidersList(providers);
+      setQuotationsList(quotations);
+      setQuotationItemsList(quotationItems);
       setDataLoaded(true);
       
       toast.success("Data loaded successfully", {
-        description: `Loaded ${users.length} users, ${projects.length} projects, and ${tasks.length} tasks`
+        description: `Loaded ${users.length} users, ${projects.length} projects, ${tasks.length} tasks, and ${quotations.length} quotations`
       });
       
     } catch (error) {
@@ -159,6 +198,9 @@ export function useDataLoading(
       setTasksList([]);
       setProjectsList([]);
       setReportsList([]);
+      setProvidersList([]);
+      setQuotationsList([]);
+      setQuotationItemsList([]);
       setDataLoaded(false); // Set to false so the app knows it needs to try loading again
     }
   };

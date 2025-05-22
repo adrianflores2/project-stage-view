@@ -1,4 +1,3 @@
-
 export type UserRole = 'worker' | 'coordinator' | 'supervisor' | 'admin';
 
 export interface User {
@@ -230,6 +229,96 @@ export interface Database {
           date?: string | null;
           message?: string | null;
           project_id?: string | null; // Added project_id field for updates
+        };
+      };
+      
+      providers_test: {
+        Row: {
+          id: string;
+          provider_name: string;
+          equipment_name: string;
+          contact: string | null;
+          price: number | null;
+          delivery_time_days: number | null;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          provider_name: string;
+          equipment_name: string;
+          contact?: string | null;
+          price?: number | null;
+          delivery_time_days?: number | null;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          provider_name?: string;
+          equipment_name?: string;
+          contact?: string | null;
+          price?: number | null;
+          delivery_time_days?: number | null;
+          created_at?: string | null;
+        };
+      };
+      
+      quotations_test: {
+        Row: {
+          id: string;
+          project_id: string | null;
+          requested_by: string | null;
+          status: string | null;
+          delivery_deadline: string;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          project_id?: string | null;
+          requested_by?: string | null;
+          status?: string | null;
+          delivery_deadline: string;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          project_id?: string | null;
+          requested_by?: string | null;
+          status?: string | null;
+          delivery_deadline?: string;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+      };
+      
+      quotation_items_test: {
+        Row: {
+          id: string;
+          quotation_id: string | null;
+          equipment_name: string;
+          ficha_estado: string | null;
+          ficha_responsable: string | null;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          quotation_id?: string | null;
+          equipment_name: string;
+          ficha_estado?: string | null;
+          ficha_responsable?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          quotation_id?: string | null;
+          equipment_name?: string;
+          ficha_estado?: string | null;
+          ficha_responsable?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
         };
       };
     };

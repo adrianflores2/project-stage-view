@@ -1,5 +1,5 @@
-
 import { User, Task, Project, SubTask, Note, Report } from '@/types';
+import { Provider, Quotation, QuotationItem } from '@/types/quotation';
 
 export interface AppContextProps {
   currentUser: User | null;
@@ -35,4 +35,21 @@ export interface AppContextProps {
   getReports: () => Report[];
   loadInitialData: () => Promise<void>;
   dataLoaded: boolean;
+  
+  providers: Provider[];
+  quotations: Quotation[];
+  quotationItems: QuotationItem[];
+  
+  getQuotationsByProjectId: (projectId: string) => Quotation[];
+  getQuotationItemsByQuotationId: (quotationId: string) => QuotationItem[];
+  getProviders: () => Provider[];
+  
+  addQuotation: (quotation: Omit<Quotation, 'id' | 'created_at' | 'updated_at'>) => Promise<Quotation>;
+  updateQuotation: (quotation: Quotation) => Promise<void>;
+  deleteQuotation: (quotationId: string) => Promise<void>;
+  
+  addQuotationItem: (item: Omit<QuotationItem, 'id' | 'created_at' | 'updated_at'>) => Promise<QuotationItem>;
+  updateQuotationItem: (item: QuotationItem) => Promise<void>;
+  deleteQuotationItem: (itemId: string) => Promise<void>;
+  generateQuotationTasks: (quotationId: string) => Promise<void>;
 }

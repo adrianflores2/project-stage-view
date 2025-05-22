@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { User, Task, Project, SubTask, Report } from '@/types';
+import { Provider, Quotation, QuotationItem } from '@/types/quotation';
 import { supabase } from '@/integrations/supabase/client';
 import { AppContextProps } from './app/types';
 import { calculateTaskProgress } from './app/utilityFunctions';
@@ -10,6 +11,7 @@ import { useSubtaskOperations } from './app/subtaskOperations';
 import { useNoteOperations } from './app/noteOperations';
 import { useUserOperations } from './app/userOperations';
 import { useReportOperations } from './app/reportOperations';
+import { useQuotationOperations } from './app/quotationOperations';
 import { useDataLoading } from './app/dataLoading';
 import { useAuthOperations } from './app/authOperations';
 
@@ -24,6 +26,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [tasksList, setTasksList] = useState<Task[]>([]);
   const [projectsList, setProjectsList] = useState<Project[]>([]);
   const [reportsList, setReportsList] = useState<Report[]>([]);
+  const [providersList, setProvidersList] = useState<Provider[]>([]);
+  const [quotationsList, setQuotationsList] = useState<Quotation[]>([]);
+  const [quotationItemsList, setQuotationItemsList] = useState<QuotationItem[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
   
@@ -32,7 +37,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setUsersList, 
     setTasksList, 
     setProjectsList, 
-    setReportsList, 
+    setReportsList,
+    setProvidersList,
+    setQuotationsList,
+    setQuotationItemsList,
     setDataLoaded
   );
   
@@ -81,6 +89,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     currentUser
   );
   
+  const { getQuotationsByProjectId, getQuotationItemsByQuotationId, getProviders,
+          addQuotation, updateQuotation, deleteQuotation,
+          addQuotationItem, updateQuotationItem, deleteQuotationItem,
+          generateQuotationTasks } = useQuotationOperations(
+    providersList,
+    quotationsList,
+    quotationItemsList,
+    setQuotationsList,
+    setQuotationItemsList,
+    addTask,
+    addSubtask,
+    currentUser
+  );
+  
   // Check for saved authentication on component mount
   useEffect(() => {
     const checkAuth = async () => {
@@ -108,6 +130,29 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     checkAuth();
   }, []);
 
+  // Connect quotations to their projects and items
+  useEffect(() => {
+    if (dataLoaded) {
+      // Connect quotations to projects
+      setQuotationsList(prevQuotations => 
+        prevQuotations.map(quotation => ({
+          ...quotation,
+          project: projectsList.find(p => p.id === quotation.project_id),
+          requester: usersList.find(u => u.id === quotation.requested_by),
+          items: quotationItemsList.filter(item => item.quotation_id === quotation.id)
+        }))
+      );
+      
+      // Connect quotation items to responsible users
+      setQuotationItemsList(prevItems => 
+        prevItems.map(item => ({
+          ...item,
+          responsible: usersList.find(u => u.id === item.ficha_responsable)
+        }))
+      );
+    }
+  }, [dataLoaded, projectsList, usersList, quotationsList, quotationItemsList]);
+
   return (
     <AppContext.Provider value={{
       currentUser,
@@ -115,6 +160,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       tasks: tasksList,
       projects: projectsList,
       reports: reportsList,
+      providers: providersList,
+      quotations: quotationsList,
+      quotationItems: quotationItemsList,
       isAuthenticated,
       login,
       logout,
@@ -141,6 +189,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       calculateTaskProgress,
       generateReport,
       getReports,
+      getQuotationsByProjectId,
+      getQuotationItemsByQuotationId,
+      getProviders,
+      addQuotation,
+      updateQuotation,
+      deleteQuotation,
+      addQuotationItem,
+      updateQuotationItem,
+      deleteQuotationItem,
+      generateQuotationTasks,
       loadInitialData,
       dataLoaded
     }}>

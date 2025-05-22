@@ -1,6 +1,5 @@
 import { User, Task, Project, Report, SubTask } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
-import { Provider, Quotation, QuotationItem } from '@/types/quotation';
 
 // Process users response
 export async function processUsersResponse(usersData: any[]): Promise<User[]> {
@@ -213,46 +212,3 @@ export async function processReportsResponse(reportsData: any[]): Promise<Report
     completedSubtasks: subtasksByReport[report.id] || []
   }));
 }
-
-// Add processing functions for quotation-related data
-export const processProvidersResponse = async (data: any[]): Promise<Provider[]> => {
-  if (!data) return [];
-  
-  return data.map(provider => ({
-    id: provider.id,
-    provider_name: provider.provider_name,
-    equipment_name: provider.equipment_name,
-    contact: provider.contact,
-    price: provider.price,
-    delivery_time_days: provider.delivery_time_days,
-    created_at: provider.created_at ? new Date(provider.created_at) : new Date()
-  }));
-};
-
-export const processQuotationsResponse = async (data: any[]): Promise<Quotation[]> => {
-  if (!data) return [];
-  
-  return data.map(quotation => ({
-    id: quotation.id,
-    project_id: quotation.project_id,
-    requested_by: quotation.requested_by,
-    status: quotation.status || 'En elaboración',
-    delivery_deadline: quotation.delivery_deadline ? new Date(quotation.delivery_deadline) : new Date(),
-    created_at: quotation.created_at ? new Date(quotation.created_at) : new Date(),
-    updated_at: quotation.updated_at ? new Date(quotation.updated_at) : new Date()
-  }));
-};
-
-export const processQuotationItemsResponse = async (data: any[]): Promise<QuotationItem[]> => {
-  if (!data) return [];
-  
-  return data.map(item => ({
-    id: item.id,
-    quotation_id: item.quotation_id,
-    equipment_name: item.equipment_name,
-    ficha_estado: item.ficha_estado || 'Por hacer',
-    ficha_responsable: item.ficha_responsable,
-    created_at: item.created_at ? new Date(item.created_at) : new Date(),
-    updated_at: item.updated_at ? new Date(item.updated_at) : new Date()
-  }));
-};

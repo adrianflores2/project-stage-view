@@ -1,14 +1,11 @@
 
 import { Project } from '@/types';
-import { Quotation } from '@/types/quotation';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 
 export function useProjectOperations(
   projects: Project[],
-  setProjectsList: React.Dispatch<React.SetStateAction<Project[]>>,
-  addQuotation?: (quotation: Omit<Quotation, 'id' | 'created_at' | 'updated_at'>) => Promise<Quotation>,
-  currentUser?: any
+  setProjectsList: React.Dispatch<React.SetStateAction<Project[]>>
 ) {
   const { toast } = useToast();
   
@@ -77,33 +74,10 @@ export function useProjectOperations(
         return updatedList.sort((a, b) => (a.number || 0) - (b.number || 0));
       });
       
-      // Create an associated quotation if addQuotation function is provided
-      if (addQuotation && currentUser) {
-        try {
-          // Set delivery deadline to 15 days from now as default
-          const deliveryDeadline = new Date();
-          deliveryDeadline.setDate(deliveryDeadline.getDate() + 15);
-          
-          await addQuotation({
-            project_id: newProject.id,
-            requested_by: currentUser.id,
-            status: 'En elaboración',
-            delivery_deadline: deliveryDeadline
-          });
-          
-          console.log("Created associated quotation for new project:", newProject.name);
-        } catch (quotationError) {
-          console.error("Error creating associated quotation:", quotationError);
-          // Don't throw error here, as the project has been created successfully
-        }
-      }
-      
       toast({
         title: "Project created",
         description: `Project "${project.name}" has been created.`
       });
-      
-      return projectWithStages;
     } catch (error: any) {
       console.error("Error creating project:", error);
       toast({

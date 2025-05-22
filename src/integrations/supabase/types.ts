@@ -119,6 +119,126 @@ export type Database = {
         }
         Relationships: []
       }
+      providers_test: {
+        Row: {
+          contact: string | null
+          created_at: string | null
+          delivery_time_days: number | null
+          equipment_name: string
+          id: string
+          price: number | null
+          provider_name: string
+        }
+        Insert: {
+          contact?: string | null
+          created_at?: string | null
+          delivery_time_days?: number | null
+          equipment_name: string
+          id?: string
+          price?: number | null
+          provider_name: string
+        }
+        Update: {
+          contact?: string | null
+          created_at?: string | null
+          delivery_time_days?: number | null
+          equipment_name?: string
+          id?: string
+          price?: number | null
+          provider_name?: string
+        }
+        Relationships: []
+      }
+      quotation_items_test: {
+        Row: {
+          created_at: string | null
+          equipment_name: string
+          ficha_estado: string | null
+          ficha_responsable: string | null
+          id: string
+          quotation_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          equipment_name: string
+          ficha_estado?: string | null
+          ficha_responsable?: string | null
+          id?: string
+          quotation_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          equipment_name?: string
+          ficha_estado?: string | null
+          ficha_responsable?: string | null
+          id?: string
+          quotation_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotation_items_test_ficha_responsable_fkey"
+            columns: ["ficha_responsable"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotation_items_test_quotation_id_fkey"
+            columns: ["quotation_id"]
+            isOneToOne: false
+            referencedRelation: "quotations_test"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quotations_test: {
+        Row: {
+          created_at: string | null
+          delivery_deadline: string
+          id: string
+          project_id: string | null
+          requested_by: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          delivery_deadline: string
+          id?: string
+          project_id?: string | null
+          requested_by?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          delivery_deadline?: string
+          id?: string
+          project_id?: string | null
+          requested_by?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotations_test_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotations_test_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       report_subtasks: {
         Row: {
           report_id: string

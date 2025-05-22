@@ -98,7 +98,8 @@ const ProjectBoardContent = () => {
   };
   
   const canDeleteProject = currentUser?.role === 'coordinator';
-  const canCreateTask = currentUser?.role === 'coordinator';
+  // Allow all users to create tasks
+  const canCreateTask = !!currentUser; // Any logged-in user can create tasks
   
   return (
     <div className="p-4">

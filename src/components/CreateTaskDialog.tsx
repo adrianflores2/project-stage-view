@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { 
@@ -60,6 +59,15 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
   // Track the previous project ID to detect changes
   const [prevProjectId, setPrevProjectId] = useState('');
   
+  // Set the current user as the assignee by default if they are a worker
+  useEffect(() => {
+    if (currentUser && currentUser.role === 'worker') {
+      setAssignedTo(currentUser.id);
+      // Workers can only select themselves, so add their ID to selectedUsers as well
+      setSelectedUsers([currentUser.id]);
+    }
+  }, [currentUser]);
+  
   useEffect(() => {
     if (projectId && selectedProject) {
       // Fetch project stages for the selected project from Supabase
@@ -114,17 +122,34 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
     e.preventDefault();
     
     try {
-      if (isMultipleAssignees) {
-        // For multiple assignees, create a task for each selected user
-        for (const userId of selectedUsers) {
+      // For workers, ensure they can only assign tasks to themselves
+      if (currentUser?.role === 'worker') {
+        if (isMultipleAssignees) {
+          // For workers, they can only assign to themselves
           await addTask({
             title,
             description,
             projectId,
             project_id: projectId,
-            project_stage_id: projectStageId, // Make sure this is the ID, not name
+            project_stage_id: projectStageId,
             projectStage: projectStages.find(stage => stage.id === projectStageId)?.name || '',
-            assignedTo: userId,
+            assignedTo: currentUser.id,
+            status: 'not-started',
+            subtasks: [],
+            notes: [],
+            dueDate,
+            priority
+          });
+        } else {
+          // For single assignee (worker can only assign to themselves)
+          await addTask({
+            title,
+            description,
+            projectId,
+            project_id: projectId,
+            project_stage_id: projectStageId,
+            projectStage: projectStages.find(stage => stage.id === projectStageId)?.name || '',
+            assignedTo: currentUser.id,
             status: 'not-started',
             subtasks: [],
             notes: [],
@@ -133,21 +158,42 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
           });
         }
       } else {
-        // For single assignee
-        await addTask({
-          title,
-          description,
-          projectId,
-          project_id: projectId,
-          project_stage_id: projectStageId, // Make sure this is the ID, not name
-          projectStage: projectStages.find(stage => stage.id === projectStageId)?.name || '',
-          assignedTo,
-          status: 'not-started',
-          subtasks: [],
-          notes: [],
-          dueDate,
-          priority
-        });
+        // For coordinators and supervisors - keep existing multi/single assignee logic
+        if (isMultipleAssignees) {
+          // For multiple assignees, create a task for each selected user
+          for (const userId of selectedUsers) {
+            await addTask({
+              title,
+              description,
+              projectId,
+              project_id: projectId,
+              project_stage_id: projectStageId,
+              projectStage: projectStages.find(stage => stage.id === projectStageId)?.name || '',
+              assignedTo: userId,
+              status: 'not-started',
+              subtasks: [],
+              notes: [],
+              dueDate,
+              priority
+            });
+          }
+        } else {
+          // For single assignee
+          await addTask({
+            title,
+            description,
+            projectId,
+            project_id: projectId,
+            project_stage_id: projectStageId,
+            projectStage: projectStages.find(stage => stage.id === projectStageId)?.name || '',
+            assignedTo,
+            status: 'not-started',
+            subtasks: [],
+            notes: [],
+            dueDate,
+            priority
+          });
+        }
       }
       
       // Reset form and close dialog
@@ -155,8 +201,10 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
       setDescription('');
       setProjectId('');
       setProjectStageId('');
-      setAssignedTo('');
-      setSelectedUsers([]);
+      if (currentUser?.role !== 'worker') {
+        setAssignedTo('');
+        setSelectedUsers([]);
+      }
       setIsMultipleAssignees(false);
       setDueDate(undefined);
       setPriority('Media');
@@ -183,6 +231,9 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
         : [...prev, userId]
     );
   };
+  
+  // Only allow workers to assign to themselves
+  const isWorker = currentUser?.role === 'worker';
   
   const isFormValid = title.trim() && projectId && projectStageId && 
     (isMultipleAssignees ? selectedUsers.length > 0 : !!assignedTo);
@@ -258,19 +309,31 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
           <div>
             <div className="flex justify-between items-center mb-2">
               <label htmlFor="assignedTo" className="text-sm font-medium">Assign To</label>
-              <Button 
-                type="button" 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setIsMultipleAssignees(!isMultipleAssignees)}
-                className="text-xs flex items-center"
-              >
-                <Users className="w-3 h-3 mr-1" />
-                {isMultipleAssignees ? 'Single assignee' : 'Multiple assignees'}
-              </Button>
+              
+              {/* Only show multiple assignees toggle for coordinators and supervisors */}
+              {!isWorker && (
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setIsMultipleAssignees(!isMultipleAssignees)}
+                  className="text-xs flex items-center"
+                >
+                  <Users className="w-3 h-3 mr-1" />
+                  {isMultipleAssignees ? 'Single assignee' : 'Multiple assignees'}
+                </Button>
+              )}
             </div>
             
-            {isMultipleAssignees ? (
+            {/* For workers, show that the task is assigned to themselves */}
+            {isWorker ? (
+              <div className="border rounded-md p-2 bg-gray-50">
+                <div className="flex items-center justify-between">
+                  <span>Task will be assigned to you</span>
+                  <Check size={16} className="text-green-500" />
+                </div>
+              </div>
+            ) : isMultipleAssignees ? (
               <div className="border rounded-md p-2 space-y-2">
                 {workerUsers.map(user => (
                   <div key={user.id} className="flex items-center">

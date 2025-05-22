@@ -279,7 +279,7 @@ export function useQuotationOperations(
         return;
       }
       
-      // Create a main quotation task
+      // Create a main quotation task - Fixed by adding the missing 'notes' property
       const mainTask = await addTask({
         title: `Quotation: ${project.name}`,
         description: `Main task for managing quotation items for project ${project.name}`,
@@ -288,7 +288,8 @@ export function useQuotationOperations(
         projectStage: 'Planning',
         status: 'in-progress',
         priority: 'Media',
-        subtasks: []
+        subtasks: [],
+        notes: [] // Add the missing notes property
       });
       
       if (!mainTask || mainTask.length === 0) {

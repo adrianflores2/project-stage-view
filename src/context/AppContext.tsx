@@ -97,7 +97,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (!error && userData) {
           setCurrentUser(userData);
           setIsAuthenticated(true);
-          await loadInitialData();
+          await loadInitialData(userData);
         } else {
           console.error("Error fetching user data:", error);
           logout();

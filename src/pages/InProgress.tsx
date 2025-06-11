@@ -12,7 +12,7 @@ const InProgress = () => {
     if (currentUser && !dataLoaded && !isLoading) {
       console.log("Loading initial data from InProgress page");
       setIsLoading(true);
-      loadInitialData().finally(() => {
+      loadInitialData(currentUser).finally(() => {
         setIsLoading(false);
       });
     }

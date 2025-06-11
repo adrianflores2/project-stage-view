@@ -55,6 +55,7 @@ export async function fetchTaskDetails(task: any): Promise<Task | null> {
       dueDate: task.due_date ? new Date(task.due_date) : undefined,
       completedDate: task.completed_date ? new Date(task.completed_date) : undefined,
       progress: task.progress || 0,
+      position: task.position ?? null,
       priority: task.priority || 'Media',
       // Keep the original properties for compatibility with Supabase
       project_id: task.project_id,
@@ -85,6 +86,7 @@ export async function updateTaskInSupabase(
     status: updatedTask.status,
     progress: progress,
     project_stage_id: updatedTask.project_stage_id,
+    position: updatedTask.position ?? null,
     priority: updatedTask.priority,
     due_date: updatedTask.dueDate || updatedTask.due_date,
     completed_date: completedDate
@@ -98,6 +100,7 @@ export async function updateTaskInSupabase(
       status: updatedTask.status,
       progress: progress,
       project_stage_id: updatedTask.project_stage_id,
+      position: updatedTask.position ?? null,
       priority: updatedTask.priority,
       due_date: updatedTask.dueDate || updatedTask.due_date,
       completed_date: completedDate

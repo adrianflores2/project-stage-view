@@ -291,6 +291,7 @@ export function useTaskOperations(
             return {
               ...updatedTask,
               progress: progress,
+              position: updatedTask.position,
               completedDate: completedDateForUpdate,
               completed_date: completedDateForUpdate
             };

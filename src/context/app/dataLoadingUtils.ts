@@ -117,6 +117,7 @@ export async function processTasksResponse(tasksData: any[]): Promise<Task[]> {
       dueDate: task.due_date ? new Date(task.due_date) : undefined,
       completedDate: task.completed_date ? new Date(task.completed_date) : undefined,
       progress: task.progress || 0,
+      position: task.position ?? null,
       priority: task.priority || 'Media',
       // Keep the original properties for compatibility with Supabase
       project_id: task.project_id,

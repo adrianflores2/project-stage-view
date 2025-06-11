@@ -33,6 +33,6 @@ export interface AppContextProps {
   calculateTaskProgress: (task: Task) => number;
   generateReport: (taskId: string, message: string) => Promise<void>;
   getReports: () => Report[];
-  loadInitialData: () => Promise<void>;
+  loadInitialData: (user?: User | null) => Promise<void>;
   dataLoaded: boolean;
 }

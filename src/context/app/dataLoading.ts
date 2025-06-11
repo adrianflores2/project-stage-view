@@ -17,7 +17,7 @@ export function useDataLoading(
   setReportsList: React.Dispatch<React.SetStateAction<Report[]>>,
   setDataLoaded: React.Dispatch<React.SetStateAction<boolean>>
 ) {
-  const loadInitialData = async () => {
+  const loadInitialData = async (currentUser?: User | null) => {
     try {
       console.log("Starting to load initial data...");
       
@@ -36,21 +36,34 @@ export function useDataLoading(
         });
       }
       
-      // Load in parallel using Promise.all to improve performance
+      // Load tasks first so we can conditionally fetch related data
+      const tasksQuery = supabase.from('tasks').select('*');
+      if (currentUser && currentUser.role === 'worker') {
+        tasksQuery.eq('assigned_to', currentUser.id);
+      }
+      const tasksResponse = await tasksQuery;
+
+      // Determine task IDs for fetching subtasks
+      const taskIds = tasksResponse.data?.map(t => t.id) || [];
+
+      // Load the rest of the data in parallel
       const [
         usersResponse,
         projectsResponse,
         projectStagesResponse,
-        tasksResponse,
         subtasksResponse,
         reportsResponse
       ] = await Promise.all([
         supabase.from('users').select('*'),
         supabase.from('projects').select('*'),
         supabase.from('project_stages').select('*'),
-        supabase.from('tasks').select('*'),
-        supabase.from('subtasks').select('*'),
-        supabase.from('reports').select('*, users!reports_user_id_fkey(name)')
+        supabase.from('subtasks').select('*').in('task_id', taskIds),
+        (currentUser && currentUser.role === 'worker'
+          ? supabase
+              .from('reports')
+              .select('*, users!reports_user_id_fkey(name)')
+              .eq('user_id', currentUser.id)
+          : supabase.from('reports').select('*, users!reports_user_id_fkey(name)'))
       ]);
       
       // Check for errors and log responses

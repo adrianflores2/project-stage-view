@@ -86,6 +86,7 @@ export async function updateTaskInSupabase(
     progress: progress,
     project_stage_id: updatedTask.project_stage_id,
     priority: updatedTask.priority,
+    position: updatedTask.position,
     due_date: updatedTask.dueDate || updatedTask.due_date,
     completed_date: completedDate
   });
@@ -99,6 +100,7 @@ export async function updateTaskInSupabase(
       progress: progress,
       project_stage_id: updatedTask.project_stage_id,
       priority: updatedTask.priority,
+      position: updatedTask.position,
       due_date: updatedTask.dueDate || updatedTask.due_date,
       completed_date: completedDate
     })

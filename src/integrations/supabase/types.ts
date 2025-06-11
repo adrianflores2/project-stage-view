@@ -386,6 +386,7 @@ export type Database = {
           progress: number
           project_id: string | null
           project_stage_id: string | null
+          position: number | null
           status: Database["public"]["Enums"]["task_status"]
           title: string
           updated_at: string | null
@@ -402,6 +403,7 @@ export type Database = {
           progress?: number
           project_id?: string | null
           project_stage_id?: string | null
+          position?: number | null
           status?: Database["public"]["Enums"]["task_status"]
           title: string
           updated_at?: string | null
@@ -418,6 +420,7 @@ export type Database = {
           progress?: number
           project_id?: string | null
           project_stage_id?: string | null
+          position?: number | null
           status?: Database["public"]["Enums"]["task_status"]
           title?: string
           updated_at?: string | null

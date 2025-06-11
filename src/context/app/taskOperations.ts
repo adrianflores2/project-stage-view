@@ -205,7 +205,8 @@ export function useTaskOperations(
             status: task.status,
             priority: task.priority,
             due_date: task.dueDate || task.due_date,
-            progress: 0
+            progress: 0,
+            position: task.position ?? 0
           })
           .select()
           .single();
@@ -237,6 +238,7 @@ export function useTaskOperations(
           completedDate: newTask.completed_date,
           completed_date: newTask.completed_date,
           progress: 0,
+          position: newTask.position ?? 0,
           subtasks: [],
           notes: []
         };
@@ -285,14 +287,15 @@ export function useTaskOperations(
           : null;
       
       // Update local state immediately
-      setTasksList(prev => 
+      setTasksList(prev =>
         prev.map(task => {
           if (task.id === updatedTask.id) {
             return {
               ...updatedTask,
               progress: progress,
               completedDate: completedDateForUpdate,
-              completed_date: completedDateForUpdate
+              completed_date: completedDateForUpdate,
+              position: updatedTask.position
             };
           }
           return task;

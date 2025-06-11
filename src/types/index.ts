@@ -39,6 +39,7 @@ export interface Task {
   completedDate?: Date;
   progress: number; // 0-100
   priority?: 'Alta' | 'Media' | 'Baja'; // Added priority field
+  position?: number; // Order within its stage
   
   // Supabase column names (snake_case)
   project_id?: string;

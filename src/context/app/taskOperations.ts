@@ -1,3 +1,4 @@
+
 import { Task, SubTask } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
@@ -167,6 +168,14 @@ export function useTaskOperations(
 
   const addTask = async (task: Omit<Task, 'id' | 'assignedDate' | 'progress'>) => {
     try {
+      // Check if user is worker and trying to assign to someone else
+      if (currentUser?.role === 'worker') {
+        const assigneeId = Array.isArray(task.assignedTo) ? task.assignedTo[0] : task.assignedTo;
+        if (assigneeId !== currentUser.id) {
+          throw new Error("Workers can only create tasks assigned to themselves");
+        }
+      }
+      
       // Check if we're creating multiple tasks for different users
       const assignees = Array.isArray(task.assignedTo) ? task.assignedTo : [task.assignedTo];
       

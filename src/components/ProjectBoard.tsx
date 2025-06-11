@@ -57,8 +57,18 @@ const ProjectBoardContent = () => {
     return numberA - numberB;
   });
   
+  // Determine projects visible to the current user
+  let visibleProjects = sortedProjects;
+  if (currentUser?.role === 'worker') {
+    visibleProjects = sortedProjects.filter(project => {
+      const activeTasks = getTasksForProject(project.id, false);
+      const completedTasks = getTasksForProject(project.id, true);
+      return activeTasks.length > 0 || completedTasks.length > 0;
+    });
+  }
+
   // Group projects with completed tasks
-  const projectsWithCompletedTasks = sortedProjects.filter(project => {
+  const projectsWithCompletedTasks = visibleProjects.filter(project => {
     const completedTasks = getTasksForProject(project.id, true);
     return completedTasks.length > 0;
   });
@@ -111,14 +121,14 @@ const ProjectBoardContent = () => {
         onCreateTask={() => setShowCreateTask(true)}
         filterableUsers={filterableUsers}
         canCreateTask={canCreateTask}
-        projects={sortedProjects}
+        projects={visibleProjects}
         filterOptions={filterOptions}
         onFilterChange={setFilterOptions}
       />
       
       {/* Active Projects */}
       <div className="mb-8">
-        {sortedProjects.map(project => (
+        {visibleProjects.map(project => (
           <ProjectColumn 
             key={project.id} 
             project={project} 

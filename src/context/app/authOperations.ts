@@ -7,7 +7,7 @@ import { User } from '@/types';
 export function useAuthOperations(
   setCurrentUser: React.Dispatch<React.SetStateAction<User | null>>,
   setIsAuthenticated: React.Dispatch<React.SetStateAction<boolean>>,
-  loadInitialData: () => Promise<void>,
+  loadInitialData: (user?: User | null) => Promise<void>,
   users: User[]
 ) {
   // Login function implementation
@@ -33,7 +33,7 @@ export function useAuthOperations(
         if (!userError && userData) {
           setCurrentUser(userData);
           setIsAuthenticated(true);
-          await loadInitialData();
+          await loadInitialData(userData);
           return true;
         } else {
           console.error("User not found in our database", userError);
@@ -55,14 +55,15 @@ export function useAuthOperations(
               console.error("Error storing user in database:", insertError);
               return false;
             } else {
-              setCurrentUser({
+              const newUser = {
                 id: data.user.id,
                 name: contextUser.name,
                 email: contextUser.email,
                 role: contextUser.role
-              });
+              };
+              setCurrentUser(newUser);
               setIsAuthenticated(true);
-              await loadInitialData();
+              await loadInitialData(newUser);
               return true;
             }
           } else {
@@ -80,14 +81,15 @@ export function useAuthOperations(
               console.error("Error creating default user:", insertError);
               return false;
             } else {
-              setCurrentUser({
+              const newUser = {
                 id: data.user.id,
                 name: email.split('@')[0],
                 email: email,
                 role: 'worker'
-              });
+              };
+              setCurrentUser(newUser);
               setIsAuthenticated(true);
-              await loadInitialData();
+              await loadInitialData(newUser);
               return true;
             }
           }

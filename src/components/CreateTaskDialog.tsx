@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { TaskSchema } from '@/lib/taskSchema';
+import type { TaskInput } from '@/lib/taskSchema';
 import { useAppContext } from '@/context/AppContext';
 import { 
   Dialog, 
@@ -49,6 +51,7 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
   const [priority, setPriority] = useState<'Alta' | 'Media' | 'Baja'>('Media');
+  const [validationErrors, setValidationErrors] = useState<Partial<Record<keyof TaskInput, string>>>({});
   
   const selectedProject = projects.find(p => p.id === projectId);
   const workerUsers = users.filter(u => u.role === 'worker');
@@ -120,6 +123,21 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const parsed = TaskSchema.safeParse({ title, description, priority, dueDate });
+    if (!parsed.success) {
+      const fieldErrors = parsed.error.flatten().fieldErrors as Record<keyof TaskInput, string[]>;
+      setValidationErrors({
+        title: fieldErrors.title?.[0],
+        description: fieldErrors.description?.[0],
+        priority: fieldErrors.priority?.[0],
+        dueDate: fieldErrors.dueDate?.[0],
+        assignedDate: fieldErrors.assignedDate?.[0]
+      });
+      return;
+    }
+
+    setValidationErrors({});
     
     try {
       // For workers, ensure they can only assign tasks to themselves
@@ -248,23 +266,29 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="title" className="text-sm font-medium">Title</label>
-            <Input 
+            <Input
               id="title"
-              placeholder="Task title" 
-              value={title} 
+              placeholder="Task title"
+              value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
             />
+            {validationErrors.title && (
+              <p className="text-sm text-destructive mt-1">{validationErrors.title}</p>
+            )}
           </div>
-          
+
           <div>
             <label htmlFor="description" className="text-sm font-medium">Description</label>
-            <Textarea 
+            <Textarea
               id="description"
-              placeholder="Task description" 
-              value={description} 
+              placeholder="Task description"
+              value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
+            {validationErrors.description && (
+              <p className="text-sm text-destructive mt-1">{validationErrors.description}</p>
+            )}
           </div>
           
           <div className="grid grid-cols-2 gap-4">
@@ -397,6 +421,9 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
                   <SelectItem value="Baja">Baja</SelectItem>
                 </SelectContent>
               </Select>
+              {validationErrors.priority && (
+                <p className="text-sm text-destructive mt-1">{validationErrors.priority}</p>
+              )}
             </div>
             
             <div>
@@ -422,6 +449,9 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
                   />
                 </PopoverContent>
               </Popover>
+              {validationErrors.dueDate && (
+                <p className="text-sm text-destructive mt-1">{validationErrors.dueDate}</p>
+              )}
             </div>
           </div>
           

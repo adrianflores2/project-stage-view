@@ -1,5 +1,7 @@
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { fetchUserTasks } from '@/lib/fetchUserTasks';
 import ProjectBoard from '@/components/ProjectBoard';
 import { useAppContext } from '@/context/AppContext';
 import { RefreshCcw } from 'lucide-react';
@@ -7,20 +9,14 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 
 const Index = () => {
-  const { currentUser, loadInitialData, dataLoaded } = useAppContext();
-  const [isLoading, setIsLoading] = useState(false);
+  const { currentUser } = useAppContext();
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
-  // Ensure data is loaded just once
-  useEffect(() => {
-    if (currentUser && !dataLoaded && !isLoading) {
-      console.log("Loading initial data from Index page");
-      setIsLoading(true);
-      loadInitialData(currentUser).finally(() => {
-        setIsLoading(false);
-      });
-    }
-  }, [currentUser, loadInitialData, dataLoaded, isLoading]);
+
+  const { refetch } = useQuery({
+    queryKey: ['tasks', currentUser?.id],
+    queryFn: () => fetchUserTasks(currentUser?.id),
+    enabled: !!currentUser
+  });
   
   // Function to manually refresh data
   const handleRefresh = () => {
@@ -32,7 +28,7 @@ const Index = () => {
       description: "Loading latest data from the server..."
     });
     
-    loadInitialData(currentUser)
+    refetch()
       .then(() => {
         toast({
           title: "Data refreshed",

@@ -1,22 +1,17 @@
 
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { fetchUserTasks } from '@/lib/fetchUserTasks';
 import InProgressTracker from '@/components/InProgressTracker';
 import { useAppContext } from '@/context/AppContext';
 
 const InProgress = () => {
-  const { currentUser, loadInitialData, dataLoaded } = useAppContext();
-  const [isLoading, setIsLoading] = useState(false);
-  
-  // Ensure data is loaded just once
-  useEffect(() => {
-    if (currentUser && !dataLoaded && !isLoading) {
-      console.log("Loading initial data from InProgress page");
-      setIsLoading(true);
-      loadInitialData(currentUser).finally(() => {
-        setIsLoading(false);
-      });
-    }
-  }, [currentUser, loadInitialData, dataLoaded, isLoading]);
+  const { currentUser } = useAppContext();
+
+  useQuery({
+    queryKey: ['tasks', currentUser?.id],
+    queryFn: () => fetchUserTasks(currentUser?.id),
+    enabled: !!currentUser
+  });
   
   return <InProgressTracker />;
 };

@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/sonner';
-import { User } from '@/types';
+import { User, UserRole } from '@/types';
 
 export function useAuthOperations(
   setCurrentUser: React.Dispatch<React.SetStateAction<User | null>>,
@@ -55,11 +55,11 @@ export function useAuthOperations(
               console.error("Error storing user in database:", insertError);
               return false;
             } else {
-              const newUser = {
+              const newUser: User = {
                 id: data.user.id,
                 name: contextUser.name,
                 email: contextUser.email,
-                role: contextUser.role
+                role: contextUser.role as UserRole
               };
               setCurrentUser(newUser);
               setIsAuthenticated(true);
@@ -81,11 +81,11 @@ export function useAuthOperations(
               console.error("Error creating default user:", insertError);
               return false;
             } else {
-              const newUser = {
+              const newUser: User = {
                 id: data.user.id,
                 name: email.split('@')[0],
                 email: email,
-                role: 'worker'
+                role: 'worker' as UserRole
               };
               setCurrentUser(newUser);
               setIsAuthenticated(true);

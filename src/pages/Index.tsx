@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 
 const Index = () => {
-  const { currentUser } = useAppContext();
+  const { currentUser, loadInitialData } = useAppContext();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const { refetch } = useQuery({
@@ -19,33 +19,36 @@ const Index = () => {
   });
   
   // Function to manually refresh data
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     if (isRefreshing) return;
     
     setIsRefreshing(true);
     toast({
-      title: "Refreshing data",
-      description: "Loading latest data from the server..."
+      title: "Actualizando datos",
+      description: "Cargando la información más reciente del servidor..."
     });
     
-    refetch()
-      .then(() => {
-        toast({
-          title: "Data refreshed",
-          description: "Latest data has been loaded successfully"
-        });
-      })
-      .catch((error) => {
-        console.error("Error refreshing data:", error);
-        toast({
-          title: "Refresh failed",
-          description: "Could not load the latest data. Please try again.",
-          variant: "destructive"
-        });
-      })
-      .finally(() => {
-        setIsRefreshing(false);
+    try {
+      // Use loadInitialData to refresh all application data
+      await loadInitialData(currentUser);
+      
+      // Also refresh the query cache
+      await refetch();
+      
+      toast({
+        title: "Datos actualizados",
+        description: "La información más reciente se ha cargado correctamente"
       });
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+      toast({
+        title: "Error al actualizar",
+        description: "No se pudo cargar la información más reciente. Inténtalo de nuevo.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
   };
   
   return (

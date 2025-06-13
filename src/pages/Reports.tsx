@@ -27,15 +27,31 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { filterReportsByDate, generateCSV, downloadCSV } from '@/lib/reportUtils.js';
 
 type DateRange = { from?: Date; to?: Date };
 
 const Reports = () => {
-  const { reports, projects, getUserById, getProjectById } = useAppContext();
+  const { reports, projects, getUserById, getProjectById, generateReport } = useAppContext();
   const [projectFilter, setProjectFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [dateRange, setDateRange] = useState<DateRange>({ from: undefined, to: undefined });
+  const [showDialog, setShowDialog] = useState(false);
+  const [reportMessage, setReportMessage] = useState('');
+
+  const handleSubmitReport = async () => {
+    await generateReport(reportMessage);
+    setReportMessage('');
+    setShowDialog(false);
+  };
   
   // Sort reports by date (newest first)
   const sortedReports = useMemo(() => {
@@ -130,23 +146,16 @@ const Reports = () => {
                       <span className="text-sm font-medium">{task.title}</span>
                       <Badge variant="outline" className="bg-status-completed">completed</Badge>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">{task.projectStage}</p>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          
-          {report.completedSubtasks.length > 0 && (
-            <div>
-              <h3 className="text-sm font-medium mb-2">Completed Subtasks:</h3>
-              <ul className="space-y-2">
-                {report.completedSubtasks.map(subtask => (
-                  <li key={subtask.id} className="bg-gray-50 p-2 rounded-md">
-                    <div className="flex justify-between">
-                      <span className="text-sm">{subtask.title}</span>
-                      <Badge variant="outline" className="bg-status-completed">completed</Badge>
-                    </div>
+                    {task.subtasks && task.subtasks.length > 0 && (
+                      <ul className="mt-2 ml-4 list-disc space-y-1">
+                        {task.subtasks.map(st => (
+                          <li key={st.id} className="text-sm flex justify-between">
+                            <span>{st.title}</span>
+                            <Badge variant="outline" className="bg-status-completed">completed</Badge>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -251,6 +260,9 @@ const Reports = () => {
               <TabsTrigger value="table">Table</TabsTrigger>
             </TabsList>
           </Tabs>
+          <Button onClick={() => setShowDialog(true)} variant="outline">
+            <FileText className="h-4 w-4 mr-1" /> New Report
+          </Button>
           <Button variant="outline" onClick={() => downloadCSV('reports.csv', generateCSV(filteredReports))}>
             <Download className="h-4 w-4 mr-1" /> Export CSV
           </Button>
@@ -273,6 +285,24 @@ const Reports = () => {
         </Alert>
       )}
     </div>
+    <Dialog open={showDialog} onOpenChange={setShowDialog}>
+      <DialogContent className="max-w-md" style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+        <DialogHeader>
+          <DialogTitle>Generate Daily Report</DialogTitle>
+        </DialogHeader>
+        <div className="py-4 space-y-4">
+          <Textarea
+            placeholder="Add an optional message"
+            value={reportMessage}
+            onChange={(e) => setReportMessage(e.target.value)}
+            className="min-h-[100px]"
+          />
+          <DialogFooter>
+            <Button onClick={handleSubmitReport}>Submit Report</Button>
+          </DialogFooter>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

@@ -31,7 +31,7 @@ export interface AppContextProps {
   addUser: (user: Omit<User, 'id'>) => Promise<void>;
   removeUser: (userId: string) => Promise<void>;
   calculateTaskProgress: (task: Task) => number;
-  generateReport: (taskId: string, message: string) => Promise<void>;
+  generateReport: (message: string) => Promise<void>;
   getReports: () => Report[];
   loadInitialData: (user?: User | null) => Promise<void>;
   dataLoaded: boolean;

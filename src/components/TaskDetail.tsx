@@ -165,7 +165,7 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
   const handleGenerateReport = async () => {
     if (currentUser) {
       setIsGeneratingReport(true);
-      await generateReport(task.id, reportMessage);
+      await generateReport(reportMessage);
       setReportMessage('');
       setIsGeneratingReport(false);
     }

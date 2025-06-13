@@ -73,7 +73,15 @@ export async function processTasksResponse(tasksData: any[]): Promise<Task[]> {
     if (!subtasksByTask[subtask.task_id]) {
       subtasksByTask[subtask.task_id] = [];
     }
-    subtasksByTask[subtask.task_id].push(subtask);
+    subtasksByTask[subtask.task_id].push({
+      id: subtask.id,
+      title: subtask.title,
+      status: subtask.status,
+      taskId: subtask.task_id,
+      completedDate: subtask.completed_date ? new Date(subtask.completed_date) : undefined,
+      task_id: subtask.task_id,
+      completed_date: subtask.completed_date
+    });
   });
   
   allNotesData.forEach(note => {
@@ -195,20 +203,34 @@ export async function processReportsResponse(reportsData: any[]): Promise<Report
       subtasksByReport[reportSubtask.report_id].push({
         id: subtaskData.id,
         title: subtaskData.title,
-        status: subtaskData.status
+        status: subtaskData.status,
+        taskId: subtaskData.task_id,
+        completedDate: subtaskData.completed_date ? new Date(subtaskData.completed_date) : undefined,
+        task_id: subtaskData.task_id,
+        completed_date: subtaskData.completed_date
       });
     }
   });
-  
+
   // Combine reports with their tasks and subtasks
-  return reportsData.map(report => ({
-    id: report.id,
-    userId: report.user_id,
-    userName: report.users?.name || 'Unknown',
-    date: new Date(report.date),
-    message: report.message || '',
-    projectId: report.project_id || undefined, // Add projectId from the database
-    completedTasks: tasksByReport[report.id] || [],
-    completedSubtasks: subtasksByReport[report.id] || []
-  }));
+  return reportsData.map(report => {
+    const tasks = tasksByReport[report.id] || [];
+    const subtasks = subtasksByReport[report.id] || [];
+
+    // Attach subtasks to their parent tasks
+    tasks.forEach(task => {
+      task.subtasks = subtasks.filter(st => st.taskId === task.id);
+    });
+
+    return {
+      id: report.id,
+      userId: report.user_id,
+      userName: report.users?.name || 'Unknown',
+      date: new Date(report.date),
+      message: report.message || '',
+      projectId: report.project_id || undefined,
+      completedTasks: tasks,
+      completedSubtasks: subtasks
+    };
+  });
 }

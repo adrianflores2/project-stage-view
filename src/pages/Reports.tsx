@@ -2,7 +2,7 @@
 import { useState, useMemo } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, User, Calendar as CalendarIcon, Briefcase } from 'lucide-react';
+import { FileText, User, Calendar as CalendarIcon, Briefcase, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { Report, Project } from '@/types';
 import { Badge } from '@/components/ui/badge';
@@ -24,11 +24,34 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { filterReportsByDate, generateCSV, downloadCSV } from '@/lib/reportUtils.js';
+
+type DateRange = { from?: Date; to?: Date };
 
 const Reports = () => {
-  const { reports, projects, getUserById, getProjectById } = useAppContext();
+  const { reports, projects, getUserById, getProjectById, generateReport } = useAppContext();
   const [projectFilter, setProjectFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const [dateRange, setDateRange] = useState<DateRange>({ from: undefined, to: undefined });
+  const [showDialog, setShowDialog] = useState(false);
+  const [reportMessage, setReportMessage] = useState('');
+
+  const handleSubmitReport = async () => {
+    await generateReport(reportMessage);
+    setReportMessage('');
+    setShowDialog(false);
+  };
   
   // Sort reports by date (newest first)
   const sortedReports = useMemo(() => {
@@ -59,14 +82,16 @@ const Reports = () => {
   
   // Filter reports based on selected project
   const filteredReports = useMemo(() => {
+    let projectFiltered: Report[];
     if (projectFilter === "all") {
-      return sortedReports;
+      projectFiltered = sortedReports;
     } else if (projectFilter === "unassigned") {
-      return reportsByProject.unassigned || [];
+      projectFiltered = reportsByProject.unassigned || [];
     } else {
-      return reportsByProject[projectFilter] || [];
+      projectFiltered = reportsByProject[projectFilter] || [];
     }
-  }, [sortedReports, projectFilter, reportsByProject]);
+    return filterReportsByDate(projectFiltered, dateRange);
+  }, [sortedReports, projectFilter, reportsByProject, dateRange]);
   
   // Get project names for the dropdown
   const projectOptions = useMemo(() => {
@@ -121,23 +146,16 @@ const Reports = () => {
                       <span className="text-sm font-medium">{task.title}</span>
                       <Badge variant="outline" className="bg-status-completed">completed</Badge>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">{task.projectStage}</p>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          
-          {report.completedSubtasks.length > 0 && (
-            <div>
-              <h3 className="text-sm font-medium mb-2">Completed Subtasks:</h3>
-              <ul className="space-y-2">
-                {report.completedSubtasks.map(subtask => (
-                  <li key={subtask.id} className="bg-gray-50 p-2 rounded-md">
-                    <div className="flex justify-between">
-                      <span className="text-sm">{subtask.title}</span>
-                      <Badge variant="outline" className="bg-status-completed">completed</Badge>
-                    </div>
+                    {task.subtasks && task.subtasks.length > 0 && (
+                      <ul className="mt-2 ml-4 list-disc space-y-1">
+                        {task.subtasks.map(st => (
+                          <li key={st.id} className="text-sm flex justify-between">
+                            <span>{st.title}</span>
+                            <Badge variant="outline" className="bg-status-completed">completed</Badge>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -195,13 +213,14 @@ const Reports = () => {
   };
   
   return (
+    <>
     <div className="p-4">
       <h1 className="text-2xl font-bold flex items-center mb-4">
         <FileText className="mr-2" /> Worker Reports
       </h1>
       
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-        <div className="flex-1 w-full md:w-auto">
+        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
           <Select value={projectFilter} onValueChange={setProjectFilter}>
             <SelectTrigger className="w-full md:w-[200px]">
               <SelectValue placeholder="Filter by project" />
@@ -214,6 +233,25 @@ const Reports = () => {
               ))}
             </SelectContent>
           </Select>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-full md:w-[200px] justify-start">
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dateRange.from && dateRange.to
+                  ? `${format(dateRange.from, 'LLL d, yyyy')} - ${format(dateRange.to, 'LLL d, yyyy')}`
+                  : 'Date range'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="range"
+                selected={dateRange}
+                onSelect={setDateRange}
+                numberOfMonths={2}
+              />
+            </PopoverContent>
+          </Popover>
         </div>
         
         <div className="flex gap-2">
@@ -223,6 +261,12 @@ const Reports = () => {
               <TabsTrigger value="table">Table</TabsTrigger>
             </TabsList>
           </Tabs>
+          <Button onClick={() => setShowDialog(true)} variant="outline">
+            <FileText className="h-4 w-4 mr-1" /> New Report
+          </Button>
+          <Button variant="outline" onClick={() => downloadCSV('reports.csv', generateCSV(filteredReports))}>
+            <Download className="h-4 w-4 mr-1" /> Export CSV
+          </Button>
         </div>
       </div>
       
@@ -242,6 +286,25 @@ const Reports = () => {
         </Alert>
       )}
     </div>
+    <Dialog open={showDialog} onOpenChange={setShowDialog}>
+      <DialogContent className="max-w-md" style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+        <DialogHeader>
+          <DialogTitle>Generate Daily Report</DialogTitle>
+        </DialogHeader>
+        <div className="py-4 space-y-4">
+          <Textarea
+            placeholder="Add an optional message"
+            value={reportMessage}
+            onChange={(e) => setReportMessage(e.target.value)}
+            className="min-h-[100px]"
+          />
+          <DialogFooter>
+            <Button onClick={handleSubmitReport}>Submit Report</Button>
+          </DialogFooter>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 };
 

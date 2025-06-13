@@ -22,6 +22,11 @@ export interface SubTask {
   id: string;
   title: string;
   status: 'not-started' | 'in-progress' | 'completed';
+  taskId?: string; // Parent task id
+  completedDate?: Date; // Timestamp when completed
+  // Supabase columns
+  task_id?: string;
+  updated_at?: string | Date;
 }
 
 export interface Task {

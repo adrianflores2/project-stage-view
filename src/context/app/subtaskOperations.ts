@@ -29,7 +29,8 @@ export function useSubtaskOperations(
         .insert({
           task_id: taskId,
           title: subtask.title,
-          status: subtask.status
+          status: subtask.status,
+          updated_at: subtask.status === 'completed' ? new Date() : null
         })
         .select()
         .single();
@@ -46,7 +47,14 @@ export function useSubtaskOperations(
       // Add the new subtask to the task
       const updatedTask = {
         ...task,
-        subtasks: [...task.subtasks, newSubtask]
+        subtasks: [
+          ...task.subtasks,
+          {
+            ...newSubtask,
+            taskId,
+            completedDate: newSubtask.updated_at ? new Date(newSubtask.updated_at) : undefined
+          }
+        ]
       };
       
       // Recalculate the progress of the task
@@ -77,7 +85,8 @@ export function useSubtaskOperations(
         .from('subtasks')
         .update({
           title: updatedSubtask.title,
-          status: updatedSubtask.status
+          status: updatedSubtask.status,
+          updated_at: updatedSubtask.status === 'completed' ? new Date() : null
         })
         .eq('id', updatedSubtask.id);
         
@@ -90,9 +99,16 @@ export function useSubtaskOperations(
       const updatedTasks = tasks.map(task => {
         if (task.id === taskId) {
           // Update the specific subtask
-          const updatedSubtasks = task.subtasks.map(st => 
-            st.id === updatedSubtask.id ? updatedSubtask : st
-          );
+          const updatedSubtasks = task.subtasks.map(st => {
+            if (st.id === updatedSubtask.id) {
+              return {
+                ...updatedSubtask,
+                completedDate: updatedSubtask.status === 'completed' ? new Date() : undefined,
+                updated_at: updatedSubtask.status === 'completed' ? new Date() : undefined
+              };
+            }
+            return st;
+          });
           
           // Create an updated task with the new subtasks
           const updatedTask = {

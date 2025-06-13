@@ -11,7 +11,7 @@ export function useReportOperations(
 ) {
   const { toast } = useToast();
   
-  const generateReport = async (taskId: string, message: string) => {
+  const generateReport = async (message: string) => {
     if (!currentUser) return;
     
     try {
@@ -55,9 +55,16 @@ export function useReportOperations(
         }));
       }
       
-      // Find the task to determine its project
-      const task = tasks.find(t => t.id === taskId);
-      const projectId = task?.projectId || task?.project_id;
+      // Determine project if all tasks belong to the same project
+      const tasksForToday = tasks.filter(t =>
+        (t.assignedTo || t.assigned_to) === currentUser.id &&
+        t.status === 'completed' &&
+        (t.completedDate || t.completed_date) &&
+        new Date((t.completedDate || t.completed_date)!).toDateString() === today.toDateString()
+      );
+
+      const uniqueProjects = Array.from(new Set(tasksForToday.map(t => t.projectId || t.project_id)));
+      const projectId = uniqueProjects.length === 1 ? uniqueProjects[0] : null;
       
       // Create new report in Supabase
       const { data: newReport, error } = await supabase
@@ -102,19 +109,20 @@ export function useReportOperations(
       
       // Get all subtasks completed today only
       const completedSubtasks: SubTask[] = [];
-      tasks
-        .filter(t => (t.assignedTo || t.assigned_to) === currentUser.id)
-        .forEach(t => {
-          // Filter subtasks to only include those completed today
-          const completedToday = t.subtasks.filter(st => {
-            if (st.status !== 'completed') return false;
-            // Since SubTask doesn't have an updatedAt property in its type definition,
-            // we can't filter based on completion date for subtasks
-            // We'll include all completed subtasks instead
-            return true;
-          });
-          completedSubtasks.push(...completedToday);
-        });
+      todaysCompletedTasks.forEach(t => {
+        const completedToday = t.subtasks.filter(st => {
+          if (st.status !== 'completed') return false;
+          if (!(st.completedDate || st.updated_at)) return false;
+          return new Date((st.completedDate || st.updated_at)!).toDateString() === today.toDateString();
+        }).map(st => ({
+          ...st,
+          taskId: t.id,
+          completedDate: st.completedDate || (st.updated_at ? new Date(st.updated_at) : undefined)
+        }));
+
+        t.subtasks = completedToday;
+        completedSubtasks.push(...completedToday);
+      });
       
       // Add subtasks to report_subtasks
       if (completedSubtasks.length > 0) {

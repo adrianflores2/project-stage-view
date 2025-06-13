@@ -213,6 +213,7 @@ const Reports = () => {
   };
   
   return (
+    <>
     <div className="p-4">
       <h1 className="text-2xl font-bold flex items-center mb-4">
         <FileText className="mr-2" /> Worker Reports
@@ -303,6 +304,7 @@ const Reports = () => {
         </div>
       </DialogContent>
     </Dialog>
+    </>
   );
 };
 

@@ -69,6 +69,7 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
   const [newSubtask, setNewSubtask] = useState('');
   const [editingTask, setEditingTask] = useState<Task>({...task});
   const [reportMessage, setReportMessage] = useState('');
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [reassignDialogOpen, setReassignDialogOpen] = useState(false);
   const [newAssigneeId, setNewAssigneeId] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
@@ -161,10 +162,12 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
     }));
   };
 
-  const handleGenerateReport = () => {
+  const handleGenerateReport = async () => {
     if (currentUser) {
-      generateReport(task.id, reportMessage);
+      setIsGeneratingReport(true);
+      await generateReport(task.id, reportMessage);
       setReportMessage('');
+      setIsGeneratingReport(false);
     }
   };
   
@@ -616,9 +619,13 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
                           />
                         </div>
                         
-                        <Button onClick={handleGenerateReport} className="w-full">
-                          <FileText size={16} className="mr-1" />
-                          Generate Report
+                        <Button onClick={handleGenerateReport} className="w-full" disabled={isGeneratingReport}>
+                          {isGeneratingReport ? (
+                            <Loader2 size={16} className="mr-1 animate-spin" />
+                          ) : (
+                            <FileText size={16} className="mr-1" />
+                          )}
+                          {isGeneratingReport ? 'Generating...' : 'Generate Report'}
                         </Button>
                       </div>
                     </div>

@@ -74,6 +74,94 @@ export function useNoteOperations(
       });
     }
   };
+
+  const updateNote = async (taskId: string, note: Note) => {
+    try {
+      // Ensure current user exists
+      if (!currentUser) {
+        toast.error("User not found", {
+          description: "You must be logged in to update notes"
+        });
+        return;
+      }
+
+      // Update note content in Supabase
+      const { error } = await supabase
+        .from('notes')
+        .update({ content: note.content })
+        .eq('id', note.id);
+
+      if (error) {
+        console.error("Error updating note:", error);
+        throw error;
+      }
+
+      // Update local state
+      setTasksList(prev =>
+        prev.map(task => {
+          if (task.id === taskId) {
+            const updatedNotes = task.notes.map(n =>
+              n.id === note.id ? { ...n, content: note.content } : n
+            );
+            return { ...task, notes: updatedNotes };
+          }
+          return task;
+        })
+      );
+
+      toast.success("Note updated", {
+        description: "Your note has been updated"
+      });
+    } catch (error: any) {
+      console.error("Error updating note:", error);
+      toast.error("Failed to update note", {
+        description: error.message
+      });
+    }
+  };
+
+  const deleteNote = async (taskId: string, noteId: string) => {
+    try {
+      // Ensure current user exists
+      if (!currentUser) {
+        toast.error("User not found", {
+          description: "You must be logged in to delete notes"
+        });
+        return;
+      }
+
+      // Delete note in Supabase
+      const { error } = await supabase
+        .from('notes')
+        .delete()
+        .eq('id', noteId);
+
+      if (error) {
+        console.error("Error deleting note:", error);
+        throw error;
+      }
+
+      // Update local state
+      setTasksList(prev =>
+        prev.map(task => {
+          if (task.id === taskId) {
+            const updatedNotes = task.notes.filter(n => n.id !== noteId);
+            return { ...task, notes: updatedNotes };
+          }
+          return task;
+        })
+      );
+
+      toast.success("Note deleted", {
+        description: "The note has been removed"
+      });
+    } catch (error: any) {
+      console.error("Error deleting note:", error);
+      toast.error("Failed to delete note", {
+        description: error.message
+      });
+    }
+  };
   
-  return { addNote };
+  return { addNote, updateNote, deleteNote };
 }

@@ -62,9 +62,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     calculateTaskProgress
   );
   
-  const { addNote } = useNoteOperations(
-    tasksList, 
-    setTasksList, 
+  const { addNote, updateNote, deleteNote } = useNoteOperations(
+    tasksList,
+    setTasksList,
     currentUser
   );
   
@@ -134,6 +134,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       updateSubtask,
       deleteSubtask,
       addNote,
+      updateNote,
+      deleteNote,
       addProject,
       updateProject,
       addUser,

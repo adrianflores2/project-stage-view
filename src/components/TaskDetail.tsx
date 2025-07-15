@@ -462,7 +462,7 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
                 {/* Notes Tab with Hover Cards - Fixed */}
                 <TabsContent value="notes" className="space-y-4 pt-4">
                   {task.notes.length > 0 ? (
-                    <ScrollArea className="max-h-[400px] pr-4">
+                    <ScrollArea className="max-h-[400px] overflow-y-auto pr-4">
                       <div className="space-y-3">
                         {task.notes.map(note => (
                           <HoverCard key={note.id} openDelay={100} closeDelay={200}>

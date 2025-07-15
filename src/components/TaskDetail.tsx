@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Task, SubTask } from '@/types';
+import { Task, SubTask, Note } from '@/types';
 import { useAppContext } from '@/context/AppContext';
 import { 
   Dialog, 
@@ -29,6 +29,7 @@ import {
   Save,
   FileText,
   Trash,
+  Edit,
   UserPlus,
   Loader2
 } from 'lucide-react';
@@ -62,6 +63,8 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
     updateSubtask,
     deleteSubtask,
     addNote,
+    updateNote,
+    deleteNote,
     generateReport
   } = useAppContext();
   
@@ -74,6 +77,9 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
   const [newAssigneeId, setNewAssigneeId] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeletingSubtask, setIsDeletingSubtask] = useState(false);
+  const [editingNote, setEditingNote] = useState<Note | null>(null);
+  const [editingNoteText, setEditingNoteText] = useState('');
+  const [isDeletingNote, setIsDeletingNote] = useState(false);
   
   const assignedUser = getUserById(task.assignedTo || task.assigned_to || '');
   const project = getProjectById(task.projectId || task.project_id || '');
@@ -87,6 +93,7 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
   const canDeleteTask = currentUser?.role === 'coordinator';
   const canReassignTask = currentUser?.role === 'coordinator';
   const canDeleteSubtask = currentUser?.role === 'coordinator' || isAssignedToCurrentUser;
+  const canModifyNote = (note: Note) => currentUser?.role === 'coordinator' || note.author === currentUser?.name;
   
   // Allow workers to generate report if they're assigned to this task
   const canGenerateReport = currentUser?.role === 'worker' && isAssignedToCurrentUser;
@@ -139,6 +146,34 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
       console.error("Error deleting subtask:", error);
     } finally {
       setIsDeletingSubtask(false);
+    }
+  };
+
+  const startEditNote = (note: Note) => {
+    setEditingNote(note);
+    setEditingNoteText(note.content);
+  };
+
+  const handleUpdateNote = async () => {
+    if (editingNote) {
+      try {
+        await updateNote(task.id, { ...editingNote, content: editingNoteText });
+        setEditingNote(null);
+        setEditingNoteText('');
+      } catch (error) {
+        console.error('Error updating note:', error);
+      }
+    }
+  };
+
+  const handleNoteDelete = async (noteId: string) => {
+    setIsDeletingNote(true);
+    try {
+      await deleteNote(task.id, noteId);
+    } catch (error) {
+      console.error('Error deleting note:', error);
+    } finally {
+      setIsDeletingNote(false);
     }
   };
   
@@ -462,29 +497,56 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
                 {/* Notes Tab with Hover Cards - Fixed */}
                 <TabsContent value="notes" className="space-y-4 pt-4">
                   {task.notes.length > 0 ? (
-                    <ScrollArea className="max-h-[400px] pr-4">
+                    <ScrollArea className="max-h-[400px] overflow-y-auto pr-4">
                       <div className="space-y-3">
                         {task.notes.map(note => (
-                          <HoverCard key={note.id} openDelay={100} closeDelay={200}>
-                            <HoverCardTrigger asChild>
-                              <div className="p-3 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors cursor-pointer relative">
-                                <p className="text-sm line-clamp-2">{note.content}</p>
-                                <div className="text-xs text-gray-500 mt-2 flex justify-between">
-                                  <span>{note.author}</span>
-                                  <span>{format(new Date(note.createdAt), 'MMM d, yyyy')}</span>
+                          <div key={note.id} className="relative">
+                            <HoverCard openDelay={100} closeDelay={200}>
+                              <HoverCardTrigger asChild>
+                                <div className="p-3 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors cursor-pointer">
+                                  <p className="text-sm line-clamp-2">{note.content}</p>
+                                  <div className="text-xs text-gray-500 mt-2 flex justify-between">
+                                    <span>{note.author}</span>
+                                    <span>{format(new Date(note.createdAt), 'MMM d, yyyy')}</span>
+                                  </div>
                                 </div>
-                              </div>
-                            </HoverCardTrigger>
-                            <HoverCardContent side="right" align="start" className="w-80 p-4 shadow-lg border-gray-200 z-50">
-                              <div className="space-y-2">
-                                <p className="text-sm whitespace-pre-wrap">{note.content}</p>
-                                <div className="text-xs text-gray-500 flex justify-between pt-2 border-t">
-                                  <span>By: {note.author}</span>
-                                  <span>{format(new Date(note.createdAt), 'MMM d, yyyy HH:mm')}</span>
+                              </HoverCardTrigger>
+                              <HoverCardContent side="right" align="start" className="w-80 p-4 shadow-lg border-gray-200 z-50">
+                                <div className="space-y-2">
+                                  <p className="text-sm whitespace-pre-wrap">{note.content}</p>
+                                  <div className="text-xs text-gray-500 flex justify-between pt-2 border-t">
+                                    <span>By: {note.author}</span>
+                                    <span>{format(new Date(note.createdAt), 'MMM d, yyyy HH:mm')}</span>
+                                  </div>
                                 </div>
+                              </HoverCardContent>
+                            </HoverCard>
+                            {canModifyNote(note) && (
+                              <div className="absolute top-1 right-1 flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-5 w-5 text-blue-500 hover:bg-blue-50"
+                                  onClick={() => startEditNote(note)}
+                                >
+                                  <Edit size={12} />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-5 w-5 text-red-500 hover:bg-red-50"
+                                  onClick={() => handleNoteDelete(note.id)}
+                                  disabled={isDeletingNote}
+                                >
+                                  {isDeletingNote ? (
+                                    <Loader2 size={12} className="animate-spin" />
+                                  ) : (
+                                    <Trash size={12} />
+                                  )}
+                                </Button>
                               </div>
-                            </HoverCardContent>
-                          </HoverCard>
+                            )}
+                          </div>
                         ))}
                       </div>
                     </ScrollArea>
@@ -634,6 +696,24 @@ const TaskDetail = ({ task, projectColor, open, onOpenChange }: TaskDetailProps)
               </ScrollArea>
             </div>
           </Tabs>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Note Dialog */}
+      <Dialog open={!!editingNote} onOpenChange={(open) => !open && setEditingNote(null)}>
+        <DialogContent className="max-w-md" style={{ position: 'fixed', top: '50%', transform: 'translateX(-50%) translateY(-50%)', left: '50%' }}>
+          <DialogHeader>
+            <DialogTitle>Edit Note</DialogTitle>
+          </DialogHeader>
+
+          <div className="py-4 space-y-4">
+            <Textarea value={editingNoteText} onChange={(e) => setEditingNoteText(e.target.value)} />
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingNote(null)}>Cancel</Button>
+            <Button onClick={handleUpdateNote} disabled={!editingNoteText.trim()}>Save</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
       

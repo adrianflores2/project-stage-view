@@ -26,6 +26,8 @@ export interface AppContextProps {
   updateSubtask: (taskId: string, subtask: SubTask) => Promise<void>;
   deleteSubtask: (taskId: string, subtaskId: string) => Promise<void>;
   addNote: (taskId: string, content: string) => Promise<void>;
+  updateNote: (taskId: string, note: Note) => Promise<void>;
+  deleteNote: (taskId: string, noteId: string) => Promise<void>;
   addProject: (project: Omit<Project, 'id'>) => Promise<void>;
   updateProject: (project: Project) => Promise<void>;
   addUser: (user: Omit<User, 'id'>) => Promise<void>;
